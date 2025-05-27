@@ -3,16 +3,104 @@ import { Link } from 'react-router-dom';
 import medicalBgImage from '../assets/medical-bg.png';
 import logoImage from '../assets/logo.jpg';
 import themeImage from '../assets/theme.png';
-import LoginModal from '../components/LoginModal';
+import { Modal, Input } from '@mui/joy';
+import { authService } from '../api/auth.service';
+import type { LoginPayload } from '../api/auth.service';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+
+interface LoginModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleLogin = async () => {
+        const payload: LoginPayload = { username, password };
+        try {
+            setIsLoading(true);
+            const result = await authService.login(payload);
+            alert(`Welcome ${result.user.username}`);
+            onClose();
+        } catch (error: any) {
+            alert(error?.response?.data?.message || 'Login failed');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') handleLogin();
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <Modal open={isOpen} onClose={onClose} className="flex items-center justify-center min-h-screen">
+            <div className="p-6 bg-white rounded-xl shadow-xl w-full max-w-sm">
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <Input
+                        placeholder="Type your email"
+                        value={username}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                    />
+                </div>
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div className="relative">
+                        <Input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Type your password"
+                            value={password}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            className="pr-10"
+                        />
+                        <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                        >
+                            {showPassword ? (
+                                <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                            ) : (
+                                <EyeIcon className="h-5 w-5 text-gray-400" />
+                            )}
+                        </button>
+                    </div>
+                </div>
+                <button
+                    onClick={handleLogin}
+                    disabled={isLoading}
+                    className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isLoading ? 'Signing in...' : 'Sign In'}
+                </button>
+                <div className="mt-4 text-sm text-center">
+                    <a href="#" className="text-blue-600 hover:underline">Forgot password?</a>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+
+
 
 const Home: React.FC = () => {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
     return (
-        <div className="min-h-screen w-full font-poppins">
+        <div className="min-h-screen w-full">
             {/* Navigation Bar */}
-            <nav className="sticky top-0 left-0 right-0 z-50 flex justify-between items-center px-16 py-6">
-                <Link to="/" className="text-white text-3xl font-normal">NDCC</Link>
+            <nav className="absolute top-0 left-0 right-0 z-50 flex justify-between items-center px-16 py-6">
+                <Link to="/" className="!text-white text-3xl font-semibold tracking-wide">NDCC</Link>
                 <div className="space-x-6">
                     <Link to="/register" className="text-white font-normal text-lg">Register</Link>
                     <button
@@ -44,7 +132,7 @@ const Home: React.FC = () => {
 
                 {/* Content Layer */}
                 <div className="relative z-20 h-full flex flex-col justify-center items-center text-white text-center px-4">
-                    <h1 className="text-6xl font-normal mb-6">Your health, our priority</h1>
+                    <h1 className="text-6xl font-bold mb-6">Your health, our priority</h1>
                     <p className="text-2xl">Welcome!</p>
                 </div>
             </div>
@@ -55,18 +143,18 @@ const Home: React.FC = () => {
                     {/* Logo and Address Section */}
                     <div className="col-span-3">
                         <img src={logoImage} alt="NDCC Logo" className="h-16 mb-4" />
-                        <p className="text-[#1250B1] text-xs leading-normal">
-                            Linh Trung Ward, Thu Duc City,<br />
+                        <p className="!text-[#1250B1] text-sm">
+                            149N Trung Ward, Thu Duc City,<br />
                             Ho Chi Minh City
                         </p>
-                        <p className="text-[#1250B1] text-xs mt-4">
-                            Copyright 2025 © NDCC Company
+                        <p className="!text-[#1250B1] text-sm mt-4">
+                            Copyright 2024 © NDCC Company
                         </p>
                     </div>
 
                     {/* About Us Section */}
                     <div className="col-span-3">
-                        <h3 className="font-normal text-[#1250B1] mb-4 uppercase text-xs">About Us</h3>
+                        <h3 className="font-bold text-blue-900 mb-4 uppercase">About Us</h3>
                         <ul className="space-y-2">
                             <li><Link to="/doctor" className="text-[#1250B1] hover:opacity-80 text-xs">Doctor</Link></li>
                             <li><Link to="/staff" className="text-[#1250B1] hover:opacity-80 text-xs">Staff</Link></li>
@@ -75,28 +163,28 @@ const Home: React.FC = () => {
 
                     {/* Contact Section */}
                     <div className="col-span-3">
-                        <h3 className="font-normal text-[#1250B1] mb-4 uppercase text-xs">Contact</h3>
-                        <p className="text-[#1250B1] text-xs">Hotline: (+84) 123 123 123</p>
-                        <p className="text-[#1250B1] text-xs">Email: ndccclinic@info.com</p>
+                        <h3 className="font-bold text-blue-900 mb-4 uppercase">Contact</h3>
+                        <p className="!text-[#1250B1]">Hotline: (+84) 123 123 123</p>
+                        <p className="!text-[#1250B1]">Email: ndcc.clinic@info.com</p>
                     </div>
 
                     {/* Social Media Tags */}
                     <div className="col-span-3">
                         <div className="space-y-2">
-                            <p className="text-[#1250B1] text-xs">#tantamchamsoc</p>
-                            <p className="text-[#1250B1] text-xs">#khachhanglathuongde</p>
-                            <p className="text-[#1250B1] text-xs">#suckhoelahangdau</p>
+                            <p className="text-blue-600">#tantamchamso</p>
+                            <p className="text-blue-600">#hienhonghiepthonggia</p>
+                            <p className="text-blue-600">#suckhoekhonghangiau</p>
                         </div>
                         <div className="mt-4">
-                            <p className="text-[#1250B1] text-xs mb-2">Follow us on social media:</p>
+                            <p className="text-gray-600 mb-2">Follow us on social media:</p>
                             <div className="flex space-x-4">
-                                <a href="#" className="text-[#1250B1] hover:opacity-80">
+                                <a href="#" className="text-gray-600 hover:text-blue-600">
                                     <i className="fab fa-facebook"></i>
                                 </a>
-                                <a href="#" className="text-[#1250B1] hover:opacity-80">
+                                <a href="#" className="text-gray-600 hover:text-blue-600">
                                     <i className="fab fa-twitter"></i>
                                 </a>
-                                <a href="#" className="text-[#1250B1] hover:opacity-80">
+                                <a href="#" className="text-gray-600 hover:text-blue-600">
                                     <i className="fab fa-linkedin"></i>
                                 </a>
                             </div>
@@ -106,10 +194,7 @@ const Home: React.FC = () => {
             </footer>
 
             {/* Login Modal */}
-            <LoginModal
-                isOpen={isLoginModalOpen}
-                onClose={() => setIsLoginModalOpen(false)}
-            />
+            <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
         </div>
     );
 };

@@ -1,0 +1,55 @@
+import axiosInstance from './axios';
+
+export interface LoginPayload {
+    username: string;
+    password: string;
+}
+
+export interface LoginResponse {
+    token: string;
+    user: {
+        id: number;
+        username: string;
+        email: string;
+        role: string;
+    };
+}
+
+export interface UserProfile {
+    id: number;
+    username: string;
+    email: string;
+    role: string;
+}
+
+class AuthService {
+    async login(payload: LoginPayload): Promise<LoginResponse> {
+        const response = await axiosInstance.post<LoginResponse>('/auth/login', payload);
+        if (response.data.token) {
+            localStorage.setItem('token', response.data.token);
+        }
+        return response.data;
+    }
+
+    async getCurrentUser(): Promise<UserProfile> {
+        const response = await axiosInstance.get<UserProfile>('/auth/me');
+        return response.data;
+    }
+
+    async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+        await axiosInstance.post('/auth/change-password', {
+            currentPassword,
+            newPassword,
+        });
+    }
+
+    logout(): void {
+        localStorage.removeItem('token');
+    }
+
+    isAuthenticated(): boolean {
+        return !!localStorage.getItem('token');
+    }
+}
+
+export const authService = new AuthService(); 
