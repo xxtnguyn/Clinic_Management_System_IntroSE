@@ -1,0 +1,46 @@
+{
+  "name": "private_clicnic",
+  "version": "1.0.0",
+  "description": "Backend API for Private Clinic Management System",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [
+    "clinic",
+    "healthcare",
+    "api",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@hapi/joi": "^17.1.1",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.18.3",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.15.5",
+    "pg-promise": "^11.13.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/supertest": "^6.0.3",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "jest": "^29.7.0",
+    "jest-mock-extended": "^4.0.0-beta1",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.1.1",
+    "sqlite3": "^5.1.7",
+    "supertest": "^7.1.1"
+  }
+}
