@@ -7,19 +7,37 @@ const { ValidationError } = require('../utils/apiError');
  */
 class PatientController {
   /**
+   * Lấy danh sách bệnh nhân cho view
+   * @route GET /api/patients/view_patient_examination_history
+   */
+  static async getPatientListForView(req, res, next) {
+    try {
+      const result = await Patient.findPatientExaminationHistory(req.query);
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    }
+    catch (error) {
+      next(error);
+    }
+
+  }
+
+  /**
    * Lấy danh sách bệnh nhân
    * @route GET /api/patients
    */
   static async getAllPatients(req, res, next) {
     try {
-      const { search, page = 1, limit = 10 } = req.query;
-      
+      const { search, page = 1, limit = 100 } = req.query;
+
       const result = await Patient.findAll({
         search,
         page: parseInt(page),
         limit: parseInt(limit)
       });
-      
+
       res.status(200).json({
         success: true,
         data: result.data,
@@ -29,7 +47,7 @@ class PatientController {
       next(error);
     }
   }
-  
+
   /**
    * Lấy thông tin chi tiết bệnh nhân
    * @route GET /api/patients/:id
@@ -38,7 +56,7 @@ class PatientController {
     try {
       const { id } = req.params;
       const patient = await Patient.findById(id);
-      
+
       res.status(200).json({
         success: true,
         data: patient
@@ -47,7 +65,7 @@ class PatientController {
       next(error);
     }
   }
-  
+
   /**
    * Tạo bệnh nhân mới
    * @route POST /api/patients
@@ -59,7 +77,7 @@ class PatientController {
   static async createPatient(req, res, next) {
     try {
       const patient = await Patient.create(req.body);
-      
+
       res.status(201).json({
         success: true,
         message: 'Tạo bệnh nhân thành công',
@@ -69,7 +87,7 @@ class PatientController {
       next(error);
     }
   }
-  
+
   /**
    * Cập nhật thông tin bệnh nhân
    * @route PUT /api/patients/:id
@@ -82,7 +100,7 @@ class PatientController {
     try {
       const { id } = req.params;
       const patient = await Patient.update(id, req.body);
-      
+
       res.status(200).json({
         success: true,
         message: 'Cập nhật thông tin bệnh nhân thành công',
@@ -92,7 +110,7 @@ class PatientController {
       next(error);
     }
   }
-  
+
   /**
    * Lấy lịch sử khám bệnh của bệnh nhân
    * @route GET /api/patients/:id/medical-history
@@ -101,12 +119,12 @@ class PatientController {
     try {
       const { id } = req.params;
       const { page = 1, limit = 10 } = req.query;
-      
+
       const result = await Patient.getMedicalHistory(id, {
         page: parseInt(page),
         limit: parseInt(limit)
       });
-      
+
       res.status(200).json({
         success: true,
         data: result.data,
@@ -116,7 +134,7 @@ class PatientController {
       next(error);
     }
   }
-  
+
   /**
    * Xóa bệnh nhân
    * @route DELETE /api/patients/:id
@@ -125,7 +143,7 @@ class PatientController {
     try {
       const { id } = req.params;
       await Patient.delete(id);
-      
+
       res.status(200).json({
         success: true,
         message: 'Xóa bệnh nhân thành công'
@@ -134,7 +152,7 @@ class PatientController {
       next(error);
     }
   }
-  
+
   /**
    * Tìm kiếm bệnh nhân theo số điện thoại hoặc tên
    * @route GET /api/patients/search
@@ -142,16 +160,16 @@ class PatientController {
   static async searchPatients(req, res, next) {
     try {
       const { query } = req.query;
-      
+
       if (!query) {
         return res.status(200).json({
           success: true,
           data: []
         });
       }
-      
+
       const patients = await Patient.search(query);
-      
+
       res.status(200).json({
         success: true,
         data: patients

@@ -9,6 +9,15 @@ const router = express.Router();
 // Tất cả các route đều yêu cầu xác thực
 router.use(authenticate);
 
+// Route: GET /api/patients/view_patient_list
+// Mô tả: Lấy danh sách bệnh nhân để xem
+// Quyền: view_patient_list
+router.get(
+  '/view_patient_examination_history',
+  authorize(['view_patient_list']),
+  PatientController.getPatientListForView
+);
+
 // Route: GET /api/patients
 // Mô tả: Lấy danh sách tất cả bệnh nhân
 // Quyền: view_patients
@@ -65,4 +74,7 @@ router.delete(
   PatientController.deletePatient
 );
 
+
 module.exports = router;
+
+

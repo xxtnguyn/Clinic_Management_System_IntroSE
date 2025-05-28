@@ -1,5 +1,7 @@
+import { useAuth } from '../contexts/AuthContext';
+
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import medicalBgImage from '../assets/medical-bg.png';
 import logoImage from '../assets/logo.jpg';
 import themeImage from '../assets/theme.png';
@@ -14,20 +16,23 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+    const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const { login } = useAuth();
 
     const handleLogin = async () => {
         const payload: LoginPayload = { username, password };
         try {
             setIsLoading(true);
-            const result = await authService.login(payload);
-            alert(`Welcome ${result.user.username}`);
+            await authService.login(payload);
+            login(); // thêm dòng này
             onClose();
+            navigate('/medical-examination');
         } catch (error: any) {
-            alert(error?.response?.data?.message || 'Login failed');
+            alert(error.message);
         } finally {
             setIsLoading(false);
         }
@@ -43,9 +48,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         <Modal open={isOpen} onClose={onClose} className="flex items-center justify-center min-h-screen">
             <div className="p-6 bg-white rounded-xl shadow-xl w-full max-w-sm">
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
                     <Input
-                        placeholder="Type your email"
+                        placeholder="Type your username"
                         value={username}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
                         onKeyDown={handleKeyDown}
@@ -90,9 +95,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     );
 };
 
-
-
-
 const Home: React.FC = () => {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -105,7 +107,7 @@ const Home: React.FC = () => {
                     <Link to="/register" className="text-white font-normal text-lg">Register</Link>
                     <button
                         onClick={() => setIsLoginModalOpen(true)}
-                        className="bg-white text-[#1250B1] px-8 py-2 rounded-md hover:bg-opacity-90 text-lg font-normal"
+                        className="bg-white text-[#1250B1] px-8 py-2 rounded-md hover:bg-opacity-90 text-lg font-normal cursor-pointer transition duration-300 hover:shadow-lg"
                     >
                         Login
                     </button>

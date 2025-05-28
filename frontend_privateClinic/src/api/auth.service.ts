@@ -24,11 +24,16 @@ export interface UserProfile {
 
 class AuthService {
     async login(payload: LoginPayload): Promise<LoginResponse> {
-        const response = await axiosInstance.post<LoginResponse>('/auth/login', payload);
-        if (response.data.token) {
-            localStorage.setItem('token', response.data.token);
+        try {
+            const response = await axiosInstance.post<LoginResponse>('/auth/login', payload);
+
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+            }
+            return response.data;
+        } catch (error: any) {
+            throw { message: error.response?.data?.message };
         }
-        return response.data;
     }
 
     async getCurrentUser(): Promise<UserProfile> {
@@ -43,13 +48,6 @@ class AuthService {
         });
     }
 
-    logout(): void {
-        localStorage.removeItem('token');
-    }
-
-    isAuthenticated(): boolean {
-        return !!localStorage.getItem('token');
-    }
 }
 
 export const authService = new AuthService(); 
