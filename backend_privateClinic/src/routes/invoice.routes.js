@@ -97,6 +97,15 @@ router.patch(
   InvoiceController.processPayment
 );
 
+// Route: GET /api/invoices/:id/pdf
+// Mô tả: Xuất hóa đơn dưới dạng PDF
+// Quyền: view_invoices
+router.get(
+  '/:id/pdf',
+  authorize(['view_invoices']),
+  InvoiceController.generatePDF
+);
+
 // Route: PATCH /api/invoices/:id/cancel
 // Mô tả: Hủy hóa đơn
 // Quyền: update_invoice

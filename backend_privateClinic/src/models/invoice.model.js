@@ -387,6 +387,79 @@ class Invoice {
     
     return rows;
   }
+  /**
+   * Lấy thông tin chi tiết của hóa đơn để xuất PDF
+   * @param {Number} id - ID của hóa đơn
+   * @returns {Promise<Object>} Thông tin chi tiết hóa đơn và đơn thuốc
+   */
+  static async getInvoiceDetailForPDF(id) {
+    // Lấy thông tin chi tiết hóa đơn
+    const invoiceQuery = `
+      SELECT 
+        i.id, i.examination_fee, i.medicine_fee, i.total_fee, 
+        i.payment_date, i.status, i.notes, i.created_at,
+        p.id as patient_id, p.full_name as patient_name, p.gender, 
+        p.birth_year, p.phone, p.address,
+        mr.id as medical_record_id, mr.symptoms, mr.diagnosis, 
+        mr.examination_date, mr.notes as medical_notes,
+        s.id as staff_id, s.full_name as staff_name, s.phone as staff_phone,
+        dt.id as disease_type_id, dt.name as disease_name
+      FROM invoices i
+      JOIN medical_records mr ON i.medical_record_id = mr.id
+      JOIN patients p ON mr.patient_id = p.id
+      JOIN staff s ON i.staff_id = s.id
+      LEFT JOIN disease_types dt ON mr.disease_type_id = dt.id
+      WHERE i.id = $1
+    `;
+    
+    const { rows } = await db.query(invoiceQuery, [id]);
+    
+    if (rows.length === 0) {
+      throw new NotFoundError('Không tìm thấy hóa đơn');
+    }
+    
+    const invoice = rows[0];
+    
+    // Lấy thông tin đơn thuốc
+    const prescriptionQuery = `
+      SELECT 
+        p.id as prescription_id, p.quantity, p.notes as prescription_notes,
+        m.id as medicine_id, m.name as medicine_name, m.unit as medicine_unit, 
+        m.price as medicine_price,
+        ui.instruction as usage_instruction,
+        (m.price * p.quantity) as subtotal
+      FROM prescriptions p
+      JOIN medicines m ON p.medicine_id = m.id
+      JOIN usage_instructions ui ON p.usage_instruction_id = ui.id
+      WHERE p.medical_record_id = $1
+      ORDER BY p.id
+    `;
+    
+    const prescriptionResult = await db.query(prescriptionQuery, [invoice.medical_record_id]);
+    
+    // Lấy thông tin phòng khám từ settings
+    const clinicInfoQueries = [
+      db.query("SELECT value FROM settings WHERE key = 'clinic_name'"),
+      db.query("SELECT value FROM settings WHERE key = 'clinic_address'"),
+      db.query("SELECT value FROM settings WHERE key = 'clinic_phone'"),
+      db.query("SELECT value FROM settings WHERE key = 'clinic_email'")
+    ];
+    
+    const [nameResult, addressResult, phoneResult, emailResult] = await Promise.all(clinicInfoQueries);
+    
+    const clinicInfo = {
+      name: nameResult.rows[0]?.value || 'PHÒNG KHÁM TƯ NHÂN',
+      address: addressResult.rows[0]?.value || '123 Đường Láng, Hà Nội',
+      phone: phoneResult.rows[0]?.value || '0123456789',
+      email: emailResult.rows[0]?.value || 'phongkham@example.com'
+    };
+    
+    return {
+      invoice,
+      prescriptions: prescriptionResult.rows,
+      clinicInfo
+    };
+  }
 }
 
 module.exports = Invoice;
