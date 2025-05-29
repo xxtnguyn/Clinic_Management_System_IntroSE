@@ -30,7 +30,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       login(); // thêm dòng này
       onClose();
       const user = (await authService.getCurrentUser()).data;
-      console.log(user);
       navigate("/dashboard", {
         state: {
           currentUser: user,

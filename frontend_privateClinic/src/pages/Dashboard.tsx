@@ -13,7 +13,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full">
-      <HeaderDashboard role={role} />
+      <HeaderDashboard currentUser={currentUser} />
 
       <HeroSection big_text={"Wellcome back, " + name} small_text={role} />
 
