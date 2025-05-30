@@ -135,7 +135,7 @@ const Home: React.FC = () => {
             onClick={() => setIsLoginModalOpen(true)}
             className="bg-white text-[#1250B1] px-8 py-2 rounded-md hover:bg-opacity-90 text-lg font-normal cursor-pointer transition duration-300 hover:shadow-lg"
           >
-            Login
+            Sign in
           </button>
         </div>
       </nav>

@@ -2,6 +2,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/logo_without_text.png";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useRef, useEffect } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { Fragment } from "react";
 
 interface Props {
   currentUser: {
@@ -23,6 +25,7 @@ export default function HeaderDashboard({ currentUser }: Props) {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isDashboard = location.pathname === "/dashboard";
@@ -45,7 +48,13 @@ export default function HeaderDashboard({ currentUser }: Props) {
     };
   }, []);
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setIsDropdownOpen(false);
+    setIsLogoutModalOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setIsLogoutModalOpen(false);
     logout();
     navigate("/");
   };
@@ -53,8 +62,8 @@ export default function HeaderDashboard({ currentUser }: Props) {
   const role_navigations = {
     admin: ["Account Approval", "Report", "Regulations", "Patient Record"],
     doctor: ["Medical Examination Form", "Patient Records"],
-    staff: ["Patient List", "Invoice"],
-    receptionist: ["Patient List", "Invoice"],
+    staff: ["Appointment List", "Invoice"],
+    receptionist: ["Appointment List", "Invoice"],
   };
 
   const pages = {
@@ -64,7 +73,7 @@ export default function HeaderDashboard({ currentUser }: Props) {
     "Patient Record": "/patient-record",
     "Medical Examination Form": "/medical-examination-form",
     "Patient Records": "/patient-records",
-    "Patient List": "/patient-list",
+    "Appointment List": "/appointment-list",
     Invoice: "/invoice",
   };
 
@@ -148,7 +157,7 @@ export default function HeaderDashboard({ currentUser }: Props) {
                   Your Profile
                 </Link>
                 <button
-                  onClick={handleLogout}
+                  onClick={handleLogoutClick}
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
                   Sign out
@@ -158,6 +167,72 @@ export default function HeaderDashboard({ currentUser }: Props) {
           </div>
         </div>
       </nav>
+
+      <Transition appear show={isLogoutModalOpen} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setIsLogoutModalOpen(false)}
+        >
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 backdrop-blur-sm bg-white/30" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white/90 backdrop-blur-md p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-gray-900"
+                  >
+                    Sign out confirmation
+                  </Dialog.Title>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      Are you sure you want to sign out? You will need to sign
+                      in again to access your account.
+                    </p>
+                  </div>
+
+                  <div className="mt-4 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-gray-300 bg-white/80 backdrop-blur-sm px-4 py-2 text-sm font-medium text-gray-700 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      onClick={() => setIsLogoutModalOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-[#1250B1]/90 backdrop-blur-sm px-4 py-2 text-sm font-medium text-white hover:bg-[#1250B1] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                      onClick={handleLogoutConfirm}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </>
   );
 }

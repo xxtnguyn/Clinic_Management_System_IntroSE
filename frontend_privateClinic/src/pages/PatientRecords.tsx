@@ -104,13 +104,14 @@ const PatientRecord = () => {
               className="flex items-center gap-2 relative"
               ref={datePickerRef}
             >
+              
               <input
                 type="text"
-                placeholder="mm"
+                placeholder="dd"
                 readOnly
                 value={
                   selectedDate
-                    ? (selectedDate.getMonth() + 1).toString().padStart(2, "0")
+                    ? selectedDate.getDate().toString().padStart(2, "0")
                     : ""
                 }
                 className="w-16 border border-gray-300 rounded px-3 py-2 text-black placeholder-gray-400 cursor-pointer"
@@ -119,11 +120,11 @@ const PatientRecord = () => {
               <span className="text-gray-400">/</span>
               <input
                 type="text"
-                placeholder="dd"
+                placeholder="mm"
                 readOnly
                 value={
                   selectedDate
-                    ? selectedDate.getDate().toString().padStart(2, "0")
+                    ? (selectedDate.getMonth() + 1).toString().padStart(2, "0")
                     : ""
                 }
                 className="w-16 border border-gray-300 rounded px-3 py-2 text-black placeholder-gray-400 cursor-pointer"
@@ -171,7 +172,7 @@ const PatientRecord = () => {
               type="submit"
               className="bg-[#1250B1] text-white px-6 py-2 rounded hover:bg-opacity-90 cursor-pointer"
             >
-              Find
+              Search
             </button>
             <button
               type="button"

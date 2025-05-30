@@ -4,6 +4,8 @@ import { Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import PatientRecord from "./pages/PatientRecords";
 import MedicalExamination from "./pages/MedicalExamination";
+import AppointmentList from "./pages/AppointmentList";
+import InvoiceList from "./pages/InvoiceList";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
 
@@ -18,7 +20,7 @@ function App() {
       <Router>
         <div className="flex h-screen w-screen">
           <Routes>
-            <Route path="/login" element={<Home />} />
+            <Route path="/signin" element={<Home />} />
             <Route path="/" element={<Home />} />
             <Route
               path="/medical-examination-form"
@@ -33,6 +35,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PatientRecord />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/appointment-list"
+              element={
+                <ProtectedRoute>
+                  <AppointmentList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoice"
+              element={
+                <ProtectedRoute>
+                  <InvoiceList />
                 </ProtectedRoute>
               }
             />
