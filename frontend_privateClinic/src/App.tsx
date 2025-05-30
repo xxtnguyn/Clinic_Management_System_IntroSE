@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Navigate } from "react-router-dom";
 
 import Home from "./pages/Home";
+import PatientRecord from "./pages/PatientRecords";
 import MedicalExamination from "./pages/MedicalExamination";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
@@ -24,6 +25,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MedicalExamination />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/patient-records"
+              element={
+                <ProtectedRoute>
+                  <PatientRecord />
                 </ProtectedRoute>
               }
             />

@@ -25,17 +25,9 @@ export default function Footer() {
             <li>
               <Link
                 to="/doctor"
-                className="text-[#1250B1] hover:opacity-80 text-xs"
+                className="text-[#1250B1] hover:opacity-80 text-sl"
               >
-                Doctor
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/staff"
-                className="text-[#1250B1] hover:opacity-80 text-xs"
-              >
-                Staff
+                Founder
               </Link>
             </li>
           </ul>

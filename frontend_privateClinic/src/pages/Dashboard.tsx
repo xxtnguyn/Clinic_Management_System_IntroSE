@@ -10,12 +10,16 @@ const Dashboard: React.FC = () => {
   const { currentUser } = location.state || {};
   const name = currentUser.full_name;
   const role = currentUser.role_name;
+  const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
 
   return (
     <div className="min-h-screen w-full">
       <HeaderDashboard currentUser={currentUser} />
 
-      <HeroSection big_text={"Wellcome back, " + name} small_text={role} />
+      <HeroSection
+        big_text={"Welcome back, " + name}
+        small_text={capitalizedRole}
+      />
 
       <Footer />
     </div>

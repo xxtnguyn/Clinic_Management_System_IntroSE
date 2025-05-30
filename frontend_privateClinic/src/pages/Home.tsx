@@ -8,6 +8,7 @@ import type { LoginPayload } from "../api/auth.service";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Footer from "../components/Footer";
 import HeroSection from "../components/HeroSection";
+import logo from "../assets/logo_without_text.png";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -27,9 +28,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       await authService.login(payload);
-      login(); // thêm dòng này
+      login();
       onClose();
-      const user = (await authService.getCurrentUser()).data;
+      const user = await authService.getCurrentUser();
       navigate("/dashboard", {
         state: {
           currentUser: user,
@@ -124,7 +125,7 @@ const Home: React.FC = () => {
           to="/"
           className="!text-white text-3xl font-semibold tracking-wide"
         >
-          NDCC
+          <img src={logo} alt="NDCC Logo" className="h-12 w-auto" />
         </Link>
         <div className="space-x-6">
           <Link to="/register" className="text-white font-normal text-lg">
