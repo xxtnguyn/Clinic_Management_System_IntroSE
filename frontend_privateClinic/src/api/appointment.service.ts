@@ -17,7 +17,9 @@ interface AppointmentSearchParams {
 }
 
 class AppointmentService {
-  async getAppointments(params?: AppointmentSearchParams): Promise<Appointment[]> {
+  async getAppointments(
+    params?: AppointmentSearchParams
+  ): Promise<Appointment[]> {
     try {
       const response = await axiosInstance.get("/patients", { params });
       const data = response.data?.data || response.data;
@@ -53,7 +55,7 @@ class AppointmentService {
         gender: data.gender,
         birth_year: data.yearOfBirth,
         address: data.address,
-        created_at: data.date
+        created_at: data.date,
       });
 
       const newAppointment = response.data?.data || response.data;
@@ -64,11 +66,12 @@ class AppointmentService {
         yearOfBirth: newAppointment.birth_year,
         address: newAppointment.address,
         date: new Date(newAppointment.created_at).toLocaleDateString("vi-VN"),
-        status: "scheduled"
+        status: "scheduled",
       };
     } catch (error: any) {
       throw {
-        message: error.response?.data?.message || "Failed to create appointment"
+        message:
+          error.response?.data?.message || "Failed to create appointment",
       };
     }
   }

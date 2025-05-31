@@ -8,6 +8,10 @@ import AppointmentList from "./pages/AppointmentList";
 import InvoiceList from "./pages/InvoiceList";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
+import Regulations from "./pages/Regulations";
+import Report from "./pages/Report";
+import AccountApproval from "./pages/AccountApproval";
+import AboutUs from "./pages/AboutUs";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -20,7 +24,7 @@ function App() {
       <Router>
         <div className="flex h-screen w-screen">
           <Routes>
-            <Route path="/signin" element={<Home />} />
+            <Route path="/login" element={<Home />} />
             <Route path="/" element={<Home />} />
             <Route
               path="/medical-examination-form"
@@ -62,6 +66,31 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/account-approval"
+              element={
+                <ProtectedRoute>
+                  <AccountApproval />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/regulations"
+              element={
+                <ProtectedRoute>
+                  <Regulations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/report"
+              element={
+                <ProtectedRoute>
+                  <Report />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/about-us" element={<AboutUs />} />
           </Routes>
         </div>
       </Router>

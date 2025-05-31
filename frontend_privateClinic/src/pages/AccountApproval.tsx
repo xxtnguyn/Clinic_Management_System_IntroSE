@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import HeaderDashboard from "../components/HeaderDashboard";
 // import Footer from "../components/Footer";
 
-const MedicalExamination: React.FC = () => {
+const AccountApproval: React.FC = () => {
   const location = useLocation();
   const { user } = location.state || {};
 
@@ -18,4 +18,4 @@ const MedicalExamination: React.FC = () => {
   );
 };
 
-export default MedicalExamination;
+export default AccountApproval;

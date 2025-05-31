@@ -60,21 +60,22 @@ export default function HeaderDashboard({ currentUser }: Props) {
   };
 
   const role_navigations = {
-    admin: ["Account Approval", "Report", "Regulations", "Patient Record"],
+    admin: ["Account Approval", "Report", "Regulations", "Patient Records"],
     doctor: ["Medical Examination Form", "Patient Records"],
     staff: ["Appointment List", "Invoice"],
-    receptionist: ["Appointment List", "Invoice"],
+    receptionist: ["Appointment List", "Invoice", "Patient Records"],
   };
 
   const pages = {
     "Account Approval": "/account-approval",
-    Report: "/report",
-    Regulations: "/regulations",
+    "Report": "/report",
+    "Regulations": "/regulations",
     "Patient Record": "/patient-record",
     "Medical Examination Form": "/medical-examination-form",
     "Patient Records": "/patient-records",
     "Appointment List": "/appointment-list",
-    Invoice: "/invoice",
+    "Invoice": "/invoice",
+    "About Us": "/about-us",
   };
 
   console.log(currentUser);
