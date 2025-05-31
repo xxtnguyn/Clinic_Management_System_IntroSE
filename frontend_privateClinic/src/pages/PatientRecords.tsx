@@ -1,10 +1,16 @@
 import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { patientService } from "../api/patient.service";
+import type { PatientExaminationHistory } from "../api/patient.service";
 import { useLocation } from "react-router-dom";
 import HeaderDashboard from "../components/HeaderDashboard";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import {
+  formatDateForAPI,
+  formatDateForDisplay,
+  convertToAPIDateFormat,
+} from "../utils/dateUtils";
 
 type SearchFormInputs = {
   date: string;
@@ -12,7 +18,7 @@ type SearchFormInputs = {
 };
 
 const PatientRecord = () => {
-  const [patients, setPatients] = useState([]);
+  const [patients, setPatients] = useState<PatientExaminationHistory[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -41,34 +47,54 @@ const PatientRecord = () => {
     };
   }, []);
 
-  // Format date as dd/mm/yyyy
-  const formatDate = (date: Date): string => {
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
-  };
-
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
     if (date) {
-      setValue("date", formatDate(date));
+      setValue("date", formatDateForAPI(date));
     } else {
       setValue("date", "");
     }
     setShowDatePicker(false);
   };
 
+  const fetchPatients = async () => {
+    try {
+      setLoading(true);
+      const result = await patientService.getPatientsExaminationHistory();
+      setPatients(result);
+    } catch (err: any) {
+      const message = err?.message || "Failed to fetch patients";
+      setError(message);
+      console.error("Fetch failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onSubmit = async (data: SearchFormInputs) => {
     try {
       setLoading(true);
       setError("");
+
+      const safeName = (data.name ?? "").trim();
+      const safeDate = data.date || "";
+
       const result = await patientService.getPatientsExaminationHistory(
-        typeof data.name === "string" ? data.name.trim() : "",
-        data.date || ""
+        safeName,
+        safeDate
       );
 
-      setPatients(result);
+      // Filter results to match both name and date if provided
+      const filtered = result.filter((patient: PatientExaminationHistory) => {
+        const normalizedDate = convertToAPIDateFormat(patient["Ngày Khám"]);
+        const matchDate = safeDate ? normalizedDate === safeDate : true;
+        const matchName = safeName
+          ? patient["Họ Tên"].toLowerCase().includes(safeName.toLowerCase())
+          : true;
+        return matchDate && matchName;
+      });
+
+      setPatients(filtered);
     } catch (err: any) {
       const message = err?.message || "Unexpected error";
       setError(message);
@@ -79,13 +105,13 @@ const PatientRecord = () => {
   };
 
   useEffect(() => {
-    handleSubmit(onSubmit)(); // gọi luôn logic của form submit để fetch full list
+    fetchPatients();
   }, []);
 
   const onClear = () => {
-    reset(); // clear form
-    setSelectedDate(null); // clear selected date
-    handleSubmit(onSubmit)(); // fetch all
+    reset();
+    setSelectedDate(null);
+    fetchPatients();
   };
 
   return (
@@ -104,7 +130,6 @@ const PatientRecord = () => {
               className="flex items-center gap-2 relative"
               ref={datePickerRef}
             >
-              
               <input
                 type="text"
                 placeholder="dd"
@@ -222,7 +247,7 @@ const PatientRecord = () => {
                       {patient["Họ Tên"]}
                     </td>
                     <td className="px-6 py-4 text-black">
-                      {patient["Ngày Khám"]}
+                      {formatDateForDisplay(patient["Ngày Khám"])}
                     </td>
                     <td className="px-6 py-4 text-black">
                       {patient["Loại Bệnh"]}

@@ -7,21 +7,31 @@ export interface Appointment {
   yearOfBirth: number;
   address: string;
   date: string;
-  time: string;
   status: "scheduled" | "completed" | "cancelled";
 }
 
-export interface AppointmentSearchParams {
+interface AppointmentSearchParams {
   name?: string;
   status?: string;
   date?: string;
 }
 
 class AppointmentService {
-  async getAppointments(params: AppointmentSearchParams) {
+  async getAppointments(params?: AppointmentSearchParams): Promise<Appointment[]> {
     try {
-      const response = await axiosInstance.get("/appointments", { params });
-      return response.data?.data;
+      const response = await axiosInstance.get("/patients", { params });
+      const data = response.data?.data || response.data;
+
+      // Chuyển đổi dữ liệu từ backend sang format UI mong muốn
+      return data.map((item: any) => ({
+        id: item.id,
+        patientName: item.full_name,
+        gender: item.gender,
+        yearOfBirth: item.birth_year,
+        address: item.address,
+        date: new Date(item.created_at).toLocaleDateString("vi-VN"), // hoặc định dạng khác
+        status: "scheduled", // Giả định vì API chưa có status
+      }));
     } catch (error: any) {
       throw {
         message:
@@ -30,29 +40,35 @@ class AppointmentService {
     }
   }
 
-  async updateAppointmentStatus(id: number, status: string) {
+  async createAppointment(data: {
+    patientName: string;
+    gender: string;
+    yearOfBirth: number;
+    address: string;
+    date: string;
+  }): Promise<Appointment> {
     try {
-      const response = await axiosInstance.patch(`/appointments/${id}/status`, {
-        status,
+      const response = await axiosInstance.post("/patients", {
+        full_name: data.patientName,
+        gender: data.gender,
+        birth_year: data.yearOfBirth,
+        address: data.address,
+        created_at: data.date
       });
-      return response.data?.data;
-    } catch (error: any) {
-      throw {
-        message:
-          error.response?.data?.message ||
-          "Failed to update appointment status",
-      };
-    }
-  }
 
-  async updateAppointment(id: number, data: Partial<Appointment>) {
-    try {
-      const response = await axiosInstance.put(`/appointments/${id}`, data);
-      return response.data?.data;
+      const newAppointment = response.data?.data || response.data;
+      return {
+        id: newAppointment.id,
+        patientName: newAppointment.full_name,
+        gender: newAppointment.gender,
+        yearOfBirth: newAppointment.birth_year,
+        address: newAppointment.address,
+        date: new Date(newAppointment.created_at).toLocaleDateString("vi-VN"),
+        status: "scheduled"
+      };
     } catch (error: any) {
       throw {
-        message:
-          error.response?.data?.message || "Failed to update appointment",
+        message: error.response?.data?.message || "Failed to create appointment"
       };
     }
   }
