@@ -20,14 +20,7 @@ export default function Footer() {
 
         {/* About Us Section */}
         <div className="col-span-3">
-          <h3 className="font-bold text-blue-900 mb-4 uppercase">
-            <Link
-              to="/about-us"
-              className="text-[#1250B1] hover:opacity-80 text-sl"
-            >
-              About Us
-            </Link>
-          </h3>
+          <h3 className="font-bold text-blue-900 mb-4 uppercase">About Us</h3>
           <ul className="space-y-2">
             <li>
               <Link

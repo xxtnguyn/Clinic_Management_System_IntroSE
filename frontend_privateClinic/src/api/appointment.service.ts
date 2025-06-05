@@ -16,12 +16,19 @@ interface AppointmentSearchParams {
   date?: string;
 }
 
+interface CreateAppointmentData {
+  patientId: number;
+  appointmentDate: string;
+  appointmentTime: string;
+  notes?: string;
+}
+
 class AppointmentService {
   async getAppointments(
     params?: AppointmentSearchParams
   ): Promise<Appointment[]> {
     try {
-      const response = await axiosInstance.get("/patients", { params });
+      const response = await axiosInstance.get("/appointments", { params });
       const data = response.data?.data || response.data;
 
       // Chuyển đổi dữ liệu từ backend sang format UI mong muốn
@@ -42,36 +49,37 @@ class AppointmentService {
     }
   }
 
-  async createAppointment(data: {
-    patientName: string;
-    gender: string;
-    yearOfBirth: number;
-    address: string;
-    date: string;
-  }): Promise<Appointment> {
+  async createAppointment(data: CreateAppointmentData): Promise<Appointment> {
     try {
-      const response = await axiosInstance.post("/patients", {
-        full_name: data.patientName,
-        gender: data.gender,
-        birth_year: data.yearOfBirth,
-        address: data.address,
-        created_at: data.date,
-      });
+      const response = await axiosInstance.post("/appointments", data);
+      const newAppointment = response.data?.data;
 
-      const newAppointment = response.data?.data || response.data;
       return {
         id: newAppointment.id,
-        patientName: newAppointment.full_name,
+        patientName: newAppointment.patient_name,
         gender: newAppointment.gender,
         yearOfBirth: newAppointment.birth_year,
         address: newAppointment.address,
-        date: new Date(newAppointment.created_at).toLocaleDateString("vi-VN"),
-        status: "scheduled",
+        date: new Date(newAppointment.appointment_date).toLocaleDateString(
+          "vi-VN"
+        ),
+        status: newAppointment.status,
       };
     } catch (error: any) {
       throw {
         message:
           error.response?.data?.message || "Failed to create appointment",
+      };
+    }
+  }
+
+  async cancelAppointment(id: number, reason: string): Promise<void> {
+    try {
+      await axiosInstance.patch(`/appointments/${id}/cancel`, { reason });
+    } catch (error: any) {
+      throw {
+        message:
+          error.response?.data?.message || "Failed to cancel appointment",
       };
     }
   }
