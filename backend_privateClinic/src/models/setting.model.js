@@ -195,6 +195,36 @@ class Setting {
     return rows[0];
   }
   
+    /**
+   * Cập nhật thông tin cài đặt theo key
+   * @param {String} key - Key của cài đặt
+   * @param {Object} data - Dữ liệu cập nhật
+   * @param {Object} client - (Optional) Client để thực hiện transaction
+   * @returns {Promise<Object>} Cài đặt sau khi cập nhật
+   */
+  static async updateByKey(key, data, client) {
+    // Kiểm tra cài đặt tồn tại
+    await this.findByKey(key);
+    
+    const { value, description } = data;
+    const queryExecutor = client || db;
+    
+    const query = `
+      UPDATE settings
+      SET
+        value = COALESCE($1, value),
+        description = COALESCE($2, description),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE key = $3
+      RETURNING id, key, value, description, created_at, updated_at
+    `;
+    
+    const { rows } = await queryExecutor.query(query, [value, description, key]);
+    
+    return rows[0];
+  }
+
+
   /**
    * Xóa cài đặt
    * @param {Number} id - ID của cài đặt
