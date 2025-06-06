@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 // Danh sách các trạng thái hợp lệ cho lịch hẹn
-const VALID_APPOINTMENT_STATUSES = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'];
+const VALID_APPOINTMENT_STATUSES = ['waiting', 'in_progress', 'completed', 'cancelled'];
 
 // Regex cho thời gian (HH:MM:SS)
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
