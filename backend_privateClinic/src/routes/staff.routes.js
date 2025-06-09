@@ -7,18 +7,10 @@ const validate = require('../middlewares/validation.middleware');
 const { 
   createStaffSchema, 
   updateStaffSchema, 
-  changePasswordSchema,
-  loginSchema
+  changePasswordSchema
 } = require('../schemas/staff.schema');
 
 const router = express.Router();
-
-// Route đăng nhập không yêu cầu xác thực
-router.post(
-  '/login',
-  validate(loginSchema),
-  StaffController.login
-);
 
 // Tất cả các route dưới đây đều yêu cầu xác thực
 router.use(authenticate);
