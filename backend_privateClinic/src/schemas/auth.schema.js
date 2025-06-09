@@ -40,9 +40,45 @@ const changePasswordSchema = Joi.object({
     })
 });
 
+/**
+ * Schema cho chức năng quên mật khẩu
+ */
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string()
+    .email()
+    .required()
+    .messages({
+      'string.email': 'Email không hợp lệ',
+      'string.empty': 'Email không được để trống',
+      'any.required': 'Email là bắt buộc'
+    })
+});
+
+/**
+ * Schema cho chức năng đặt lại mật khẩu
+ */
+const resetPasswordSchema = Joi.object({
+  token: Joi.string()
+    .required()
+    .messages({
+      'string.empty': 'Token không được để trống',
+      'any.required': 'Token là bắt buộc'
+    }),
+  password: Joi.string()
+    .min(8)
+    .required()
+    .messages({
+      'string.min': 'Mật khẩu phải có ít nhất 8 ký tự',
+      'string.empty': 'Mật khẩu không được để trống',
+      'any.required': 'Mật khẩu là bắt buộc'
+    })
+});
+
 const authSchema = {
   loginSchema,
-  changePasswordSchema
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema
 };
 
 module.exports = authSchema;

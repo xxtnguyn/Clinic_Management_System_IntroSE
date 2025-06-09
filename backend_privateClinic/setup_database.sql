@@ -812,3 +812,21 @@ INSERT INTO invoices (medical_record_id, staff_id, examination_fee, medicine_fee
     (3, 3, 30000, 9000, 39000, '2025-04-20 12:00:00', 'paid', 'Thanh toán tiền mặt'),
     (4, 3, 30000, 5700, 35700, '2025-04-20 13:00:00', 'paid', 'Thanh toán tiền mặt'),
     (5, 3, 30000, 28000, 58000, '2025-04-20 14:00:00', 'paid', 'Thanh toán chuyển khoản');
+
+
+
+-- Tạo bảng lưu trữ token đặt lại mật khẩu
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  token VARCHAR(255) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  used BOOLEAN DEFAULT FALSE
+);
+
+-- Tạo index cho token để tìm kiếm nhanh hơn
+CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token);
+
+-- Tạo index cho user_id để tìm kiếm nhanh hơn
+CREATE INDEX IF NOT EXISTS idx_password_reset_user_id ON password_reset_tokens(user_id);
