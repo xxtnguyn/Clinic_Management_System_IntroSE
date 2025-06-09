@@ -64,7 +64,14 @@ const resetPasswordSchema = Joi.object({
       'string.empty': 'Token không được để trống',
       'any.required': 'Token là bắt buộc'
     }),
-
+  password: Joi.string()
+    .min(8)
+    .required()
+    .messages({
+      'string.min': 'Mật khẩu phải có ít nhất 8 ký tự',
+      'string.empty': 'Mật khẩu không được để trống',
+      'any.required': 'Mật khẩu là bắt buộc'
+    })
 });
 
 const authSchema = {

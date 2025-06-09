@@ -118,7 +118,49 @@ class StaffController {
       next(error);
     }
   }
-
+  
+  /**
+   * Đăng nhập nhân viên
+   * @route POST /api/staff/login
+   */
+  static async login(req, res, next) {
+    try {
+      const { username, password } = req.body;
+      
+      // Kiểm tra thông tin đăng nhập
+      const staff = await Staff.authenticate(username, password);
+      
+      if (!staff) {
+        throw new ValidationError('Tên đăng nhập hoặc mật khẩu không đúng');
+      }
+      
+      // Tạo token
+      const token = generateToken({
+        id: staff.id,
+        username: staff.username,
+        role: staff.role
+      });
+      
+      res.status(200).json({
+        success: true,
+        message: 'Đăng nhập thành công',
+        data: {
+          token,
+          user: {
+            id: staff.id,
+            username: staff.username,
+            fullName: staff.full_name,
+            email: staff.email,
+            phone: staff.phone,
+            role: staff.role,
+            isActive: staff.is_active
+          }
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
   
   /**
    * Đổi mật khẩu
