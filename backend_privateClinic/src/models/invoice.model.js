@@ -169,28 +169,87 @@ class Invoice {
   }
   
   /**
+   * Cập nhật thông tin hóa đơn
+   * @param {Number} id - ID của hóa đơn
+   * @param {Object} data - Dữ liệu cập nhật
+   * @returns {Promise<Object>} Hóa đơn sau khi cập nhật
+   */
+  static async update(id, data) {
+    // Lấy thông tin hóa đơn hiện tại
+    const currentInvoice = await this.findById(id);
+    
+    // Không cho phép cập nhật hóa đơn đã hủy
+    if (currentInvoice.status === 'cancelled') {
+      throw new DatabaseError(
+        'Không thể cập nhật hóa đơn đã hủy',
+        `Invoice ID: ${id}`,
+        'Vui lòng tạo hóa đơn mới nếu cần thay đổi'
+      );
+    }
+    
+    const { status, notes } = data;
+    
+    // Nếu đang cập nhật status thành 'cancelled', sử dụng cancelInvoice
+    if (status === 'cancelled') {
+      return this.cancelInvoice(id);
+    }
+    
+    // Nếu đang cập nhật status thành 'paid', sử dụng processPayment
+    if (status === 'paid') {
+      return this.processPayment(id);
+    }
+    
+    // Nếu cố gắng thay đổi status nhưng không phải 'paid' hoặc 'cancelled'
+    if (status && status !== currentInvoice.status) {
+      throw new DatabaseError(
+        'Trạng thái không hợp lệ',
+        `Trạng thải hiện tại: ${currentInvoice.status}, Trạng thái mới: ${status}`,
+        'Chỉ có thể cập nhật thành "paid" hoặc "cancelled" thông qua API tương ứng'
+      );
+    }
+    
+    // Chỉ cho phép cập nhật notes nếu có
+    if (!notes) {
+      return currentInvoice; // Không có gì để cập nhật
+    }
+    
+    // Cập nhật notes
+    const query = `
+      UPDATE invoices
+      SET 
+        notes = $1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING id, medical_record_id, staff_id,
+                examination_fee, medicine_fee, total_fee,
+                payment_date, status, notes, created_at, updated_at
+    `;
+    
+    const { rows } = await db.query(query, [notes, id]);
+    
+    return rows[0];
+  }
+
+  /**
    * Tạo hóa đơn mới
    * @param {Object} data - Dữ liệu hóa đơn
    * @returns {Promise<Object>} Hóa đơn mới tạo
    */
   static async create(data) {
     try {
+      const { medical_record_id, staff_id, status = 'pending', notes } = data;
+      
       // Kiểm tra hồ sơ bệnh án đã có hóa đơn chưa
-      const existingInvoice = await this.findByMedicalRecordId(data.medical_record_id);
-      if (existingInvoice) {
+      const existingInvoice = await this.findByMedicalRecordId(medical_record_id);
+      
+      // Nếu đã có hóa đơn và KHÔNG phải ở trạng thái đã hủy
+      if (existingInvoice && existingInvoice.status !== 'cancelled') {
         throw new DatabaseError(
-          'Hồ sơ bệnh án này đã có hóa đơn',
-          `Invoice ID: ${existingInvoice.id}`,
-          'Vui lòng cập nhật hóa đơn hiện có thay vì tạo mới'
+          'Hồ sơ bệnh án này đã có hóa đơn đang hoạt động',
+          `Invoice ID: ${existingInvoice.id}, Status: ${existingInvoice.status}`,
+          'Vui lòng cập nhật hóa đơn hiện có hoặc hủy hóa đơn cũ trước khi tạo mới'
         );
       }
-      
-      const { 
-        medical_record_id, 
-        staff_id, 
-        status = 'pending',
-        notes 
-      } = data;
       
       // Lấy phí khám từ settings thay vì từ input
       const examination_fee = await Setting.getValue('examination_fee', 30000);
@@ -228,43 +287,14 @@ class Invoice {
   }
   
   /**
-   * Cập nhật hóa đơn
-   * @param {Number} id - ID của hóa đơn
-   * @param {Object} data - Dữ liệu cập nhật
-   * @returns {Promise<Object>} Hóa đơn sau khi cập nhật
-   */
-  static async update(id, data) {
-    // Kiểm tra hóa đơn tồn tại
-    await this.findById(id);
-    
-    const { 
-      status,
-      notes 
-    } = data;
-    
-    // Cập nhật hóa đơn (loại bỏ examination_fee khỏi các trường có thể cập nhật)
-    const query = `
-      UPDATE invoices
-      SET 
-        status = COALESCE($1, status),
-        notes = COALESCE($2, notes)
-      WHERE id = $3
-      RETURNING id, medical_record_id, staff_id,
-                examination_fee, medicine_fee, total_fee,
-                payment_date, status, notes, created_at, updated_at
-    `;
-    
-    const { rows } = await db.query(query, [
-      status,
-      notes,
-      id
-    ]);
-    
-    return rows[0];
   }
   
-  /**
-   * Thanh toán hóa đơn
+  // Chỉ cho phép cập nhật notes nếu status không thay đổi
+  if (status && status !== currentInvoice.status) {
+    throw new DatabaseError(
+      'Không thể thay đổi trạng thái trực tiếp',
+      `Sử dụng các API riêng cho thao tác thanh toán/hủy hóa đơn`
+    );
    * @param {Number} id - ID của hóa đơn
    * @returns {Promise<Object>} Hóa đơn sau khi thanh toán
    */
