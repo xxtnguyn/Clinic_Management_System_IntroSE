@@ -14,7 +14,7 @@ router.use(authenticate);
 // Quyền: view_patient_list
 router.get(
   '/view_patient_examination_history',
-  authorize(['view_patient_list']),
+  authorize(['view_patients']),
   PatientController.getPatientListForView
 );
 
