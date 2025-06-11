@@ -46,7 +46,7 @@ const AboutUs: React.FC = () => {
 
       {/* Link Back to Home ở góc dưới trái */}
       <div className="absolute bottom-4 left-4">
-        <Link to="/dashboard" className="text-blue-700 text-sm hover:underline">
+        <Link to="/" className="text-blue-700 text-sm hover:underline">
           &larr; Back to Home
         </Link>
       </div>

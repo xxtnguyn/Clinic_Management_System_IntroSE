@@ -60,21 +60,20 @@ export default function HeaderDashboard({ currentUser }: Props) {
   };
 
   const role_navigations = {
-    admin: ["Account Approval", "Report", "Regulations", "Patient Records"],
+    admin: ["Report", "Regulations", "Patient Records"],
     doctor: ["Medical Examination Form", "Patient Records"],
     staff: ["Appointment List", "Invoice"],
     receptionist: ["Appointment List", "Invoice", "Patient Records"],
   };
 
   const pages = {
-    "Account Approval": "/account-approval",
-    "Report": "/report",
-    "Regulations": "/regulations",
+    Report: "/report",
+    Regulations: "/regulations",
     "Patient Record": "/patient-record",
     "Medical Examination Form": "/medical-examination-form",
     "Patient Records": "/patient-records",
     "Appointment List": "/appointment-list",
-    "Invoice": "/invoice",
+    Invoice: "/invoice",
     "About Us": "/about-us",
   };
 
@@ -151,12 +150,15 @@ export default function HeaderDashboard({ currentUser }: Props) {
                   </p>
                   <p className="text-sm text-gray-500">{currentUser.email}</p>
                 </div>
-                <Link
-                  to="/profile"
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                <button
+                  onClick={() => {
+                    navigate("/profile", { state: { user: currentUser } });
+                    setIsDropdownOpen(false); // đóng dropdown nếu muốn
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
                   Your Profile
-                </Link>
+                </button>
                 <button
                   onClick={handleLogoutClick}
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

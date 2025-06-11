@@ -10,8 +10,8 @@ import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Regulations from "./pages/Regulations";
 import Report from "./pages/Report";
-import AccountApproval from "./pages/AccountApproval";
 import AboutUs from "./pages/AboutUs";
+import Profile from "./pages/Profile";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -67,14 +67,6 @@ function App() {
               }
             />
             <Route
-              path="/account-approval"
-              element={
-                <ProtectedRoute>
-                  <AccountApproval />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/regulations"
               element={
                 <ProtectedRoute>
@@ -91,6 +83,7 @@ function App() {
               }
             />
             <Route path="/about-us" element={<AboutUs />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </div>
       </Router>

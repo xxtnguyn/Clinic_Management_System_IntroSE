@@ -2,85 +2,130 @@ import axiosInstance from "./axios";
 
 export interface Appointment {
   id: number;
-  patientName: string;
+  // patient_id: number;
+  appointment_date: string; // ISO format
+  appointment_time: string;
+  status: string;
+  patient_name: string;
   gender: string;
-  yearOfBirth: number;
+  birth_year: number;
   address: string;
-  date: string;
-  status: "scheduled" | "completed" | "cancelled";
+  notes: string;
+  phone: string;
 }
 
-interface AppointmentSearchParams {
-  name?: string;
-  status?: string;
-  date?: string;
+export interface CreateAppointmentPayload {
+  patient_id: number;
+  appointment_date: string;
+  appointment_time: string;
+  notes: string;
 }
 
-interface CreateAppointmentData {
-  patientId: number;
-  appointmentDate: string;
-  appointmentTime: string;
-  notes?: string;
+export interface PaginationData {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ApiResponse {
+  success: boolean;
+  data: Appointment[];
+  pagination: PaginationData;
 }
 
 class AppointmentService {
   async getAppointments(
-    params?: AppointmentSearchParams
-  ): Promise<Appointment[]> {
+    status: string = "",
+    date: string = "",
+    name: string = "",
+    page: number = 1
+  ): Promise<ApiResponse> {
     try {
-      const response = await axiosInstance.get("/appointments", { params });
-      const data = response.data?.data || response.data;
-
-      // Chuyển đổi dữ liệu từ backend sang format UI mong muốn
-      return data.map((item: any) => ({
-        id: item.id,
-        patientName: item.full_name,
-        gender: item.gender,
-        yearOfBirth: item.birth_year,
-        address: item.address,
-        date: new Date(item.created_at).toLocaleDateString("vi-VN"), // hoặc định dạng khác
-        status: "scheduled", // Giả định vì API chưa có status
-      }));
+      const response = await axiosInstance.get("/appointments", {
+        params: {
+          status,
+          date,
+          name,
+          page,
+        },
+      });
+      return response.data;
     } catch (error: any) {
-      throw {
-        message:
-          error.response?.data?.message || "Failed to fetch appointments",
-      };
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch appointments"
+      );
     }
   }
 
-  async createAppointment(data: CreateAppointmentData): Promise<Appointment> {
+  async getAppointmentById(id: number): Promise<Appointment> {
     try {
+      const response = await axiosInstance.get(`/appointments/${id}`);
+      return response.data?.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch appointment"
+      );
+    }
+  }
+
+  async updateAppointment(
+    id: number,
+    data: Partial<Omit<Appointment, "id" | "created_at" | "updated_at">>
+  ): Promise<Appointment> {
+    try {
+      console.log("Updating appointment with data:", data);
+
+      // --- Test gửi 4 trường lần lượt ---
+      // const fieldsToTest = [
+      //   { appointment_date: "2025-05-15T00:00:00.000Z" },
+      //   { appointment_time:  "10:00:00" },
+      //   { status: "waiting" },
+      //   { notes: "test2" },
+      // ];
+
+      // for (const field of fieldsToTest) {
+      //   const key = Object.keys(field)[0];
+      //   const value = field[key as keyof typeof field];
+      //   if (value === undefined || value === null || value === "") continue;
+
+      //   try {
+      //     const resTest = await axiosInstance.put(`/appointments/${id}`, field);
+      //     console.log(`Test update ${key} success:`, resTest.data);
+      //   } catch (errTest) {
+      //     console.error(`Test update ${key} failed:`, errTest);
+      //   }
+      // }
+      // --- Kết thúc test ---
+
+      const response = await axiosInstance.put(`/appointments/${id}`, data);
+      return response.data?.data;
+    } catch (error: any) {
+      console.error("Update error response:", error.response);
+      const message =
+        error.response?.data?.message ||
+        (typeof error.message === "string"
+          ? error.message
+          : "Failed to update appointment");
+      throw new Error(message);
+    }
+  }
+
+  async createAppointment(
+    data: CreateAppointmentPayload
+  ): Promise<Appointment> {
+    try {
+      console.log("Creating appointment with data:", data);
       const response = await axiosInstance.post("/appointments", data);
-      const newAppointment = response.data?.data;
-
-      return {
-        id: newAppointment.id,
-        patientName: newAppointment.patient_name,
-        gender: newAppointment.gender,
-        yearOfBirth: newAppointment.birth_year,
-        address: newAppointment.address,
-        date: new Date(newAppointment.appointment_date).toLocaleDateString(
-          "vi-VN"
-        ),
-        status: newAppointment.status,
-      };
+      return response.data?.data;
     } catch (error: any) {
-      throw {
-        message:
-          error.response?.data?.message || "Failed to create appointment",
-      };
-    }
-  }
-
-  async cancelAppointment(id: number, reason: string): Promise<void> {
-    try {
-      await axiosInstance.patch(`/appointments/${id}/cancel`, { reason });
-    } catch (error: any) {
-      throw {
-        message:
-          error.response?.data?.message || "Failed to cancel appointment",
-      };
+      console.error("Create error response:", error.response);
+      const message =
+        error.response?.data?.message ||
+        (typeof error.message === "string"
+          ? error.message
+          : "Failed to create appointment");
+      throw new Error(message);
     }
   }
 }

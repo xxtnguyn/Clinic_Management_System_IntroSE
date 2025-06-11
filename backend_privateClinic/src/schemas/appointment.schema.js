@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 // Danh sách các trạng thái hợp lệ cho lịch hẹn
-const VALID_APPOINTMENT_STATUSES = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show'];
+const VALID_APPOINTMENT_STATUSES = ['scheduled', 'waiting', 'in_progress', 'completed', 'cancelled'];
 
 // Regex cho thời gian (HH:MM:SS)
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
@@ -43,7 +43,7 @@ const notPastTime = (value, helpers) => {
 
 // Base schema cho lịch hẹn
 const baseAppointmentSchema = {
-  patientId: Joi.number()
+  patient_id: Joi.number()
     .integer()
     .min(1)
     .required()
@@ -54,7 +54,7 @@ const baseAppointmentSchema = {
       'any.required': 'ID bệnh nhân là bắt buộc'
     }),
 
-  doctorId: Joi.number()
+  doctor_id: Joi.number()
     .integer()
     .min(1)
     .messages({
@@ -63,52 +63,53 @@ const baseAppointmentSchema = {
       'number.min': 'ID bác sĩ phải lớn hơn 0'
     }),
 
-  appointmentDate: Joi.string()
+  appointment_date: Joi.string()
     .pattern(DATE_REGEX)
     .required()
     .custom(notPastDate, 'Ngày không được là ngày trong quá khứ')
     .messages({
-      'string.pattern.base': 'Ngày hẹn không hợp lệ (định dạng YYYY-MM-DD)',
+      'string.pattern.base': 'Ngày hẹn phải có định dạng YYYY-MM-DD',
       'any.required': 'Ngày hẹn là bắt buộc',
-      'date.notPast': 'Ngày hẹn không được là ngày trong quá khứ'
+      'date.notPast': 'Không thể đặt lịch hẹn trong quá khứ'
     }),
 
-  appointmentTime: Joi.string()
+  appointment_time: Joi.string()
     .pattern(TIME_REGEX)
     .required()
     .custom(notPastTime, 'Thời gian không được là thời gian trong quá khứ')
     .messages({
-      'string.pattern.base': 'Thời gian hẹn không hợp lệ (định dạng HH:MM hoặc HH:MM:SS)',
+      'string.pattern.base': 'Thời gian hẹn phải có định dạng HH:MM:SS',
       'any.required': 'Thời gian hẹn là bắt buộc',
-      'time.past': 'Thời gian hẹn không được là thời gian trong quá khứ'
+      'time.past': 'Không thể đặt lịch hẹn trong quá khứ'
     }),
-
-  orderNumber: Joi.number()
-    .integer()
-    .min(1)
-    .required()
-    .messages({
-      'number.base': 'Số thứ tự phải là số',
-      'number.integer': 'Số thứ tự phải là số nguyên',
-      'number.min': 'Số thứ tự phải lớn hơn 0',
-      'any.required': 'Số thứ tự là bắt buộc'
-    }),
-
-  status: Joi.string()
-    .valid(...VALID_APPOINTMENT_STATUSES)
-    .required()
-    .messages({
-      'string.empty': 'Trạng thái không được để trống',
-      'any.only': `Trạng thái phải là một trong các giá trị: ${VALID_APPOINTMENT_STATUSES.join(', ')}`,
-      'any.required': 'Trạng thái là bắt buộc'
-    }),
-
-  notes: Joi.string().allow('', null)
+    
+  notes: Joi.string().allow('', null).messages({
+    'string.base': 'Ghi chú phải là chuỗi ký tự'
+  })
 };
 
 // Schema cho tạo lịch hẹn mới
 const createAppointmentSchema = Joi.object({
-  ...baseAppointmentSchema
+  ...baseAppointmentSchema,
+  
+  // Thêm các trường mặc định
+  status: Joi.string()
+    .valid(...VALID_APPOINTMENT_STATUSES)
+    .default('scheduled')
+    .messages({
+      'string.empty': 'Trạng thái không được để trống',
+      'any.only': `Trạng thái phải là một trong các giá trị: ${VALID_APPOINTMENT_STATUSES.join(', ')}`
+    }),
+    
+  order_number: Joi.number()
+    .integer()
+    .min(1)
+    .optional()
+    .messages({
+      'number.base': 'Số thứ tự phải là số',
+      'number.integer': 'Số thứ tự phải là số nguyên',
+      'number.min': 'Số thứ tự phải lớn hơn 0'
+    })
 });
 
 // Schema cho cập nhật lịch hẹn
