@@ -16,23 +16,17 @@ class Appointment {
       date, 
       status, 
       patientId,
-      page = 1, 
-      limit = 10 
+      patientName,
+      phone,
+      page,
+      limit
     } = options;
-    
-    const offset = (page - 1) * limit;
     
     let query = `
       SELECT 
         a.id, a.patient_id, a.appointment_date, a.appointment_time, 
         a.order_number, a.status, a.notes, a.created_at, a.updated_at,
         p.full_name as patient_name, p.gender, p.birth_year, p.phone
-      FROM appointment_lists a
-      JOIN patients p ON a.patient_id = p.id
-    `;
-    
-    let countQuery = `
-      SELECT COUNT(*) 
       FROM appointment_lists a
       JOIN patients p ON a.patient_id = p.id
     `;
@@ -56,32 +50,66 @@ class Appointment {
       conditions.push(`a.patient_id = $${queryParams.length}`);
     }
     
+    // Tìm kiếm theo tên bệnh nhân (không phân biệt hoa thường)
+    if (patientName) {
+      queryParams.push(`%${patientName.toLowerCase()}%`);
+      conditions.push(`LOWER(p.full_name) LIKE $${queryParams.length}`);
+    }
+    
+    // Tìm kiếm theo số điện thoại
+    if (phone) {
+      // Xóa các ký tự không phải số
+      const phoneNumber = phone.replace(/\D/g, '');
+      if (phoneNumber) {
+        queryParams.push(`%${phoneNumber}%`);
+        conditions.push(`REPLACE(p.phone, ' ', '') LIKE $${queryParams.length}`);
+      }
+    }
+    
     // Thêm WHERE nếu có điều kiện lọc
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;
-      countQuery += ` WHERE ${conditions.join(' AND ')}`;
     }
     
-    // Thêm sắp xếp và phân trang
-    query += ` 
-      ORDER BY a.appointment_date, a.order_number
-      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
-    `;
+    // Sắp xếp kết quả
+    query += ` ORDER BY a.appointment_date, a.order_number`;
     
-    queryParams.push(limit, offset);
+    // Nếu có page và limit thì thực hiện phân trang
+    if (page && limit) {
+      const offset = (page - 1) * limit;
+      query += ` LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+      queryParams.push(parseInt(limit), offset);
+      
+      const countQuery = `
+        SELECT COUNT(*) 
+        FROM appointment_lists a
+        JOIN patients p ON a.patient_id = p.id
+        ${conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : ''}
+      `;
+      
+      const [result, countResult] = await Promise.all([
+        db.query(query, queryParams),
+        db.query(countQuery, queryParams.slice(0, -2))
+      ]);
+      
+      const total = parseInt(countResult.rows[0].count);
+      
+      return {
+        data: result.rows,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    }
     
+    // Nếu không có phân trang
     const { rows } = await db.query(query, queryParams);
-    const countResult = await db.query(countQuery, queryParams.slice(0, -2));
-    const total = parseInt(countResult.rows[0].count);
-    
     return {
       data: rows,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit)
-      }
+      pagination: null
     };
   }
   
