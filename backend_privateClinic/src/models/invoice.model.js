@@ -239,16 +239,30 @@ class Invoice {
     try {
       const { medical_record_id, staff_id, status = 'pending', notes } = data;
       
-      // Kiểm tra hồ sơ bệnh án đã có hóa đơn chưa
-      const existingInvoice = await this.findByMedicalRecordId(medical_record_id);
+      // Lấy tất cả hóa đơn của hồ sơ bệnh án này, sắp xếp theo thời gian tạo mới nhất
+      const existingInvoices = await db.query(
+        `SELECT id, status, created_at 
+         FROM invoices 
+         WHERE medical_record_id = $1 
+         ORDER BY created_at DESC`,
+        [medical_record_id]
+      );
       
-      // Nếu đã có hóa đơn và KHÔNG phải ở trạng thái đã hủy
-      if (existingInvoice && existingInvoice.status !== 'cancelled') {
-        throw new DatabaseError(
-          'Hồ sơ bệnh án này đã có hóa đơn đang hoạt động',
-          `Invoice ID: ${existingInvoice.id}, Status: ${existingInvoice.status}`,
-          'Vui lòng cập nhật hóa đơn hiện có hoặc hủy hóa đơn cũ trước khi tạo mới'
-        );
+      // Nếu đã có hóa đơn trước đó
+      if (existingInvoices.rows.length > 0) {
+        const latestInvoice = existingInvoices.rows[0];
+        
+        // Nếu hóa đơn gần nhất chưa bị hủy
+        if (latestInvoice.status !== 'cancelled') {
+          throw new DatabaseError(
+            'Hồ sơ bệnh án này đã có hóa đơn đang hoạt động',
+            `Invoice ID: ${latestInvoice.id}, Status: ${latestInvoice.status}`,
+            'Vui lòng cập nhật hóa đơn hiện có hoặc hủy hóa đơn cũ trước khi tạo mới'
+          );
+        }
+        
+        // Nếu hóa đơn gần nhất đã bị hủy, cho phép tạo hóa đơn mới
+        // Không cần thực hiện gì thêm
       }
       
       // Lấy phí khám từ settings thay vì từ input
@@ -377,17 +391,30 @@ class Invoice {
   static async getDailyRevenue(date) {
     const query = `
       SELECT 
-        payment_date::DATE AS date,
         COUNT(*) AS patient_count,
-        SUM(examination_fee) AS examination_fee_total,
-        SUM(medicine_fee) AS medicine_fee_total,
-        SUM(total_fee) AS total_revenue
+        COALESCE(SUM(examination_fee), 0) AS examination_fee_total,
+        COALESCE(SUM(medicine_fee), 0) AS medicine_fee_total,
+        COALESCE(SUM(total_fee), 0) AS total_revenue
       FROM invoices
-      WHERE payment_date::DATE = $1 AND status = 'paid'
-      GROUP BY payment_date::DATE
+      WHERE 
+        DATE(payment_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Ho_Chi_Minh') = $1::date
+        AND status = 'paid'
     `;
     
     const { rows } = await db.query(query, [date]);
+    
+    // Thêm ngày vào kết quả
+    if (rows.length > 0) {
+      rows[0].date = date; // Sử dụng chính xác ngày được truyền vào
+    } else {
+      rows.push({
+        date,
+        patient_count: '0',
+        examination_fee_total: '0.00',
+        medicine_fee_total: '0.00',
+        total_revenue: '0.00'
+      });
+    }
     
     if (rows.length === 0) {
       return {
