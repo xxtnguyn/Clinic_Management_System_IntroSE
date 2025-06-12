@@ -21,40 +21,31 @@ export interface CreateAppointmentPayload {
   notes: string;
 }
 
-export interface PaginationData {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-export interface ApiResponse {
-  success: boolean;
-  data: Appointment[];
-  pagination: PaginationData;
-}
 
 class AppointmentService {
-  async getAppointments(
-    status: string = "",
-    date: string = "",
-    name: string = "",
-    page: number = 1
-  ): Promise<ApiResponse> {
+  async getAppointments(status = "", date = "", name = "") {
     try {
+      console.log(
+        "Fetching appointments with status:",
+        status,
+        "date:",
+        date,
+        "name:",
+        name
+      );
       const response = await axiosInstance.get("/appointments", {
         params: {
           status,
           date,
           name,
-          page,
         },
       });
-      return response.data;
+      return response.data?.data as Appointment[];
     } catch (error: any) {
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch appointments"
-      );
+      throw {
+        message:
+          error.response?.data?.message || "Failed to fetch appointments",
+      };
     }
   }
 
@@ -77,27 +68,27 @@ class AppointmentService {
       console.log("Updating appointment with data:", data);
 
       // --- Test gửi 4 trường lần lượt ---
-      // const fieldsToTest = [
-      //   { appointment_date: "2025-05-15T00:00:00.000Z" },
-      //   { appointment_time:  "10:00:00" },
-      //   { status: "waiting" },
-      //   { notes: "test2" },
-      // ];
+    // const fieldsToTest = [
+    //   { appointment_date: "2025-05-15T00:00:00.000Z" },
+    //   { appointment_time:  "10:00:00" },
+    //   { status: "waiting" },
+    //   { notes: "test2" },
+    // ];
 
-      // for (const field of fieldsToTest) {
-      //   const key = Object.keys(field)[0];
-      //   const value = field[key as keyof typeof field];
-      //   if (value === undefined || value === null || value === "") continue;
+    // for (const field of fieldsToTest) {
+    //   const key = Object.keys(field)[0];
+    //   const value = field[key as keyof typeof field];
+    //   if (value === undefined || value === null || value === "") continue;
 
-      //   try {
-      //     const resTest = await axiosInstance.put(`/appointments/${id}`, field);
-      //     console.log(`Test update ${key} success:`, resTest.data);
-      //   } catch (errTest) {
-      //     console.error(`Test update ${key} failed:`, errTest);
-      //   }
-      // }
-      // --- Kết thúc test ---
-
+    //   try {
+    //     const resTest = await axiosInstance.put(`/appointments/${id}`, field);
+    //     console.log(`Test update ${key} success:`, resTest.data);
+    //   } catch (errTest) {
+    //     console.error(`Test update ${key} failed:`, errTest);
+    //   }
+    // }
+    // --- Kết thúc test ---
+      
       const response = await axiosInstance.put(`/appointments/${id}`, data);
       return response.data?.data;
     } catch (error: any) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import HeaderDashboard from "../components/HeaderDashboard";
 import { appointmentService } from "../api/appointment.service";
-import type { Appointment, PaginationData } from "../api/appointment.service";
+import type { Appointment } from "../api/appointment.service";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import searchIcon from "../assets/search.png";
@@ -17,6 +17,7 @@ import { patientService } from "../api/patient.service";
 import type { Patient } from "../api/patient.service";
 import { SearchBar } from "../components/SearchBar";
 import type { SearchBarValues } from "../components/SearchBar";
+import Pagination from "../components/Pagination";
 
 type SearchFormInputs = {
   date: string;
@@ -26,12 +27,6 @@ type SearchFormInputs = {
 
 const AppointmentList = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [pagination, setPagination] = useState<PaginationData>({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -48,7 +43,7 @@ const AppointmentList = () => {
   const [editMode, setEditMode] = useState(false);
   const [hoveredRowId, setHoveredRowId] = useState<number | null>(null);
   const [selectedAppointment, setSelectedAppointment] =
-    useState<Appointment | null>(null); // appointment được chọn để edit
+    useState<Appointment | null>(null);
   const [createMode, setCreateMode] = useState(false);
   const [showPatientList, setShowPatientList] = useState(false);
   const [patientSearch, setPatientSearch] = useState("");
@@ -91,6 +86,24 @@ const AppointmentList = () => {
     status: "",
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  // Tính toán appointments cho trang hiện tại
+  const getCurrentAppointments = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return appointments.slice(startIndex, endIndex);
+  };
+
+  // Tính tổng số trang
+  const totalPages = Math.ceil(appointments.length / ITEMS_PER_PAGE);
+
+  // Xử lý khi chuyển trang
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -127,14 +140,8 @@ const AppointmentList = () => {
     try {
       setLoading(true);
       setError("");
-      const response = await appointmentService.getAppointments(
-        "",
-        "",
-        "",
-        pagination.page
-      );
-      setAppointments(response.data);
-      setPagination(response.pagination);
+      const response = await appointmentService.getAppointments();
+      setAppointments(response);
     } catch (err: any) {
       setError(err.message || "Failed to fetch appointments");
       console.error("Error fetching appointments:", err);
@@ -154,19 +161,22 @@ const AppointmentList = () => {
         searchValues.name
       );
 
-      const filtered = result.data.filter((appointment: Appointment) => {
+      const filtered = result.filter((appointment: Appointment) => {
         const normalizedDate = formatDateTimetoAPIFormat(
           appointment.appointment_date
         );
+
         const matchDate = searchValues.date
           ? normalizedDate === searchValues.date
           : true;
+
         const matchName = searchValues.name
           ? appointment.patient_name
               .toLowerCase()
               .split(" ")
               .some((word) => word.startsWith(searchValues.name.toLowerCase()))
           : true;
+
         const matchStatus = searchValues.status
           ? appointment.status === searchValues.status
           : true;
@@ -196,7 +206,7 @@ const AppointmentList = () => {
 
   useEffect(() => {
     fetchAppointments();
-  }, [pagination.page]);
+  }, []);
 
   useEffect(() => {
     if ((createMode || (editMode && selectedAppointment)) && formRef.current) {
@@ -241,8 +251,7 @@ const AppointmentList = () => {
       try {
         setIsLoadingPatients(true);
         setPatientError("");
-        const data = await patientService.getAllPatients(); // Đúng tên hàm
-        // console.log("Fetched patients:", data);
+        const data = await patientService.getAllPatients();
         setPatients(data);
         console.log("Set patients in AppointmentList:", data);
       } catch (error: any) {
@@ -257,11 +266,6 @@ const AppointmentList = () => {
     fetchPatients();
   }, [isPatientModalOpen]);
 
-  // Thêm hàm lọc bệnh nhân theo tên
-  // const filteredPatients = patients.filter((patient) =>
-  //   patient.full_name?.toLowerCase().includes(patientSearch.toLowerCase())
-  // );
-
   const handlePatientSelect = (patient: Patient) => {
     setSelectedPatient(patient);
     setEditForm({
@@ -272,52 +276,6 @@ const AppointmentList = () => {
       phone: patient.phone,
       address: patient.address,
     });
-  };
-
-  // Generate array of page numbers for pagination
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const { page, totalPages } = pagination;
-
-    if (totalPages <= 5) {
-      // If total pages is 5 or less, show all pages
-      for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-      }
-    } else {
-      // Always show first page
-      pageNumbers.push(1);
-
-      // Calculate start and end of page range
-      let start = Math.max(2, page - 1);
-      let end = Math.min(totalPages - 1, page + 1);
-
-      // Add ellipsis if needed
-      if (start > 2) {
-        pageNumbers.push("...");
-      }
-
-      // Add pages in range
-      for (let i = start; i <= end; i++) {
-        pageNumbers.push(i);
-      }
-
-      // Add ellipsis if needed
-      if (end < totalPages - 1) {
-        pageNumbers.push("...");
-      }
-
-      // Always show last page
-      pageNumbers.push(totalPages);
-    }
-
-    return pageNumbers;
-  };
-
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= pagination.totalPages) {
-      setPagination((prev) => ({ ...prev, page: newPage }));
-    }
   };
 
   return (
@@ -372,7 +330,6 @@ const AppointmentList = () => {
                   <th className="px-3 py-3 text-center">Patient Name</th>
                   <th className="px-3 py-3 text-center">Gender</th>
                   <th className="px-3 py-3 text-center">Address</th>
-                  {/* <th className="px-6 py-3 text-left">Year of Birth</th> */}
                   <th className="px-3 py-3 text-center">Appointment Date</th>
                   <th className="px-3 py-3 text-center">Time</th>
                   <th className="px-3 py-3 text-center">Notes</th>
@@ -399,7 +356,7 @@ const AppointmentList = () => {
                     </td>
                   </tr>
                 ) : (
-                  appointments.map((appointment, index) => (
+                  getCurrentAppointments().map((appointment, index) => (
                     <tr
                       key={appointment.id}
                       className={`border-b transition-colors duration-150 cursor-pointer ${
@@ -430,8 +387,10 @@ const AppointmentList = () => {
                         }
                       }}
                     >
-                      <td className="px-6 py-4 text-black">{index + 1}</td>
                       <td className="px-6 py-4 text-black">
+                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                      </td>
+                      <td className="px-3 py-4 text-black">
                         {appointment.patient_name}
                       </td>
                       <td className="px-6 py-4 text-black">
@@ -440,13 +399,10 @@ const AppointmentList = () => {
                       <td className="px-6 py-4 text-black">
                         {appointment.address}
                       </td>
-                      {/* <td className="px-6 py-4 text-black">
-                      {appointment.birth_year}
-                    </td> */}
-                      <td className="px-6 py-4 text-black">
+                      <td className="px-4 py-4 text-black">
                         {formatDateTimeForDisplay(appointment.appointment_date)}
                       </td>
-                      <td className="px-6 py-4 text-black">
+                      <td className="px-2 py-4 text-black">
                         {appointment.appointment_time}
                       </td>
                       <td className="px-6 py-4 text-black">
@@ -466,133 +422,20 @@ const AppointmentList = () => {
                 )}
               </tbody>
             </table>
-            {/* <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center">
-                      <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : error ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-4 text-center text-red-500"
-                    >
-                      {error}
-                    </td>
-                  </tr>
-                ) : appointments.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      No appointments found
-                    </td>
-                  </tr>
-                ) : (
-                  appointments.map((appointment) => (
-                    <tr key={appointment.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {appointment.patient_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {formatDateTimeForDisplay(appointment.appointment_date)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {appointment.appointment_time}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                            appointment.status
-                          )}`}
-                        >
-                          {appointment.status.replace("_", " ").toUpperCase()}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table> */}
           </div>
 
           {/* Pagination */}
           {!loading && !error && appointments.length > 0 && (
-            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
-              <div className="flex-1 flex justify-between items-center">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
-                    ${
-                      pagination.page === 1
-                        ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                        : "text-gray-700 bg-white hover:bg-gray-50"
-                    }`}
-                >
-                  Previous
-                </button>
-
-                <div className="flex items-center space-x-2">
-                  {getPageNumbers().map((pageNum, index) => (
-                    <button
-                      key={index}
-                      onClick={() =>
-                        typeof pageNum === "number" && handlePageChange(pageNum)
-                      }
-                      disabled={pageNum === "..."}
-                      className={`px-4 py-2 text-sm font-medium rounded-md
-                        ${
-                          typeof pageNum === "number"
-                            ? pageNum === pagination.page
-                              ? "bg-blue-500 text-white"
-                              : "text-gray-700 hover:bg-gray-50"
-                            : "text-gray-700"
-                        }`}
-                    >
-                      {pageNum}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.totalPages}
-                  className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
-                    ${
-                      pagination.page === pagination.totalPages
-                        ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                        : "text-gray-700 bg-white hover:bg-gray-50"
-                    }`}
-                >
-                  Next
-                </button>
-              </div>
+            <div className="px-6 py-4 border-t border-gray-200">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             </div>
           )}
         </div>
+
         <div className="flex justify-end mt-4 gap-4">
           {/* Nút Edit hoặc Cancel */}
           <button
@@ -642,7 +485,7 @@ const AppointmentList = () => {
                 }, 100);
               }
             }}
-            disabled={editMode} // nếu đang Edit thì không được tạo
+            disabled={editMode}
           >
             {createMode ? "Cancel Creating" : "Create"}
           </button>
@@ -658,7 +501,6 @@ const AppointmentList = () => {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-16">
-              {/* Bên trái: Thông tin bệnh nhân - Read only */}
               <div className="space-y-6 col-span-2">
                 <div>
                   <label className="block mb-1 font-medium text-gray-600">

@@ -19,14 +19,15 @@ class Appointment {
       patientName,
       phone,
       page,
-      limit
+      limit,
+      address
     } = options;
     
     let query = `
       SELECT 
         a.id, a.patient_id, a.appointment_date, a.appointment_time, 
         a.order_number, a.status, a.notes, a.created_at, a.updated_at,
-        p.full_name as patient_name, p.gender, p.birth_year, p.phone
+        p.full_name as patient_name, p.gender, p.birth_year, p.phone, p.address
       FROM appointment_lists a
       JOIN patients p ON a.patient_id = p.id
     `;
