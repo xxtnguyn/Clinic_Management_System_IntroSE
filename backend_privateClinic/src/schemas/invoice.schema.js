@@ -66,10 +66,28 @@ const baseInvoiceSchema = {
   notes: Joi.string().allow('', null)
 };
 
+// Tạo bản sao của baseInvoiceSchema cho việc tạo mới
+const createInvoiceFields = {
+  ...baseInvoiceSchema,
+  staff_id: Joi.number()
+    .integer()
+    .min(1)
+    .messages({
+      'number.base': 'ID nhân viên phải là số',
+      'number.integer': 'ID nhân viên phải là số nguyên',
+      'number.min': 'ID nhân viên phải lớn hơn 0'
+    }),
+  status: Joi.string()
+    .valid(...VALID_INVOICE_STATUSES)
+    .default('pending')
+    .messages({
+      'string.empty': 'Trạng thái không được để trống',
+      'any.only': `Trạng thái phải là một trong các giá trị: ${VALID_INVOICE_STATUSES.join(', ')}`
+    })
+};
+
 // Schema cho tạo hóa đơn mới
-const createInvoiceSchema = Joi.object({
-  ...baseInvoiceSchema
-});
+const createInvoiceSchema = Joi.object(createInvoiceFields);
 
 // Schema cho cập nhật hóa đơn
 const updateInvoiceSchema = Joi.object({

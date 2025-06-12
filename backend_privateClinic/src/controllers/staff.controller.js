@@ -188,27 +188,6 @@ class StaffController {
       next(error);
     }
   }
-  
-  /**
-   * Lấy thông tin nhân viên hiện tại
-   * @route GET /api/staff/me
-   */
-  static async getCurrentStaff(req, res, next) {
-    try {
-      const staff = await Staff.findById(req.user.id);
-      
-      if (!staff) {
-        throw new ValidationError('Không tìm thấy thông tin nhân viên');
-      }
-      
-      res.status(200).json({
-        success: true,
-        data: staff
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
 }
 
 module.exports = StaffController;

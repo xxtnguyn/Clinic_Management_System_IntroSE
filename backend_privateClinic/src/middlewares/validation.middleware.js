@@ -1,4 +1,4 @@
-const { BadRequestError } = require('../utils/apiError');
+const { ValidationError } = require('../utils/apiError');
 
 /**
  * Middleware xác thực dữ liệu đầu vào sử dụng Joi schema
@@ -16,7 +16,7 @@ const validate = (schema, source = 'body') => {
 
     if (error) {
       const message = error.details.map((detail) => detail.message).join(', ');
-      return next(new BadRequestError(`Validation error: ${message}`));
+      return next(new ValidationError(`Dữ liệu không hợp lệ: ${message}`));
     }
 
     // Thay thế dữ liệu đã được validate và làm sạch

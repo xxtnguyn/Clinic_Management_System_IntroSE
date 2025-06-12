@@ -12,9 +12,9 @@ class AppointmentController {
    */
   static async getAllAppointments(req, res, next) {
     try {
-      const { date, status, patientId, page, limit } = req.query;
+      const { date, status, patientId, patientName, phone, page, limit } = req.query;
       const appointments = await Appointment.findAll({ 
-        date, status, patientId, page, limit 
+        date, status, patientId, patientName, phone, page, limit 
       });
       
       res.status(200).json({

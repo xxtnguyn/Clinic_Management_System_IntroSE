@@ -165,6 +165,33 @@ class InvoiceController {
       next(error);
     }
   }
+  /**
+   * Xuất hóa đơn dưới dạng PDF
+   * @route GET /api/invoices/:id/pdf
+   */
+  static async generatePDF(req, res, next) {
+    try {
+      const { id } = req.params;
+      const HtmlPdfGenerator = require('../utils/htmlPdfGenerator');
+      
+      // Lấy dữ liệu chi tiết hóa đơn
+      const invoiceData = await Invoice.getInvoiceDetailForPDF(id);
+      const { invoice } = invoiceData;
+      
+      // Kiểm tra trạng thái hóa đơn
+      if (invoice.status === 'cancelled') {
+        throw new ValidationError('Không thể xuất PDF cho hóa đơn đã hủy');
+      }
+      
+      // Sử dụng HtmlPdfGenerator để tạo PDF hỗ trợ tiếng Việt đầy đủ
+      await HtmlPdfGenerator.generateInvoice(res, invoiceData);
+      
+    } catch (error) {
+      next(error);
+    }
+  }
+  
+
 }
 
 module.exports = InvoiceController;

@@ -23,6 +23,14 @@ class AuthorizationError extends Error {
   }
 }
 
+class BadRequestError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'BadRequestError';
+    this.statusCode = 400;
+  }
+}
+
 class ValidationError extends Error {
   constructor(message, errors = []) {
     super(message);
@@ -45,5 +53,6 @@ module.exports = {
   AuthenticationError,
   AuthorizationError,
   ValidationError,
-  DatabaseError
+  DatabaseError,
+  BadRequestError
 };
