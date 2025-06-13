@@ -152,7 +152,7 @@ class Auth {
     const userQuery = `
       SELECT 
         s.id, s.username, s.full_name, s.email, s.phone,
-        s.role_id, s.is_active, s.last_login,
+        s.role_id, s.is_active, s.last_login, s.address,
         r.name as role_name
       FROM staff s
       JOIN roles r ON s.role_id = r.id
@@ -439,6 +439,49 @@ class Auth {
       await db.query('ROLLBACK');
       throw error;
     }
+  }
+
+  /**
+   * Lấy thông tin người dùng hiện tại
+   * @param {Number} userId - ID của người dùng
+   * @returns {Promise<Object>} Thông tin người dùng
+   */
+  static async getCurrentUser(userId) {
+    const query = `
+      SELECT 
+        s.id, s.username, s.full_name, s.email, s.phone, s.address, 
+        s.gender, s.birth_date, s.avatar, s.is_active,
+        s.role_id, r.name as role_name
+      FROM staff s
+      JOIN roles r ON s.role_id = r.id
+      WHERE s.id = $1
+    `;
+    
+    const { rows } = await db.query(query, [userId]);
+    
+    if (rows.length === 0) {
+      throw new Error('Người dùng không tồn tại');
+    }
+    
+    const user = rows[0];
+    
+    // Định dạng lại dữ liệu trả về
+    return {
+      id: user.id,
+      username: user.username,
+      fullName: user.full_name,
+      email: user.email,
+      phone: user.phone,
+      address: user.address,
+      gender: user.gender,
+      birthDate: user.birth_date,
+      avatar: user.avatar,
+      isActive: user.is_active,
+      role: {
+        id: user.role_id,
+        name: user.role_name
+      }
+    };
   }
 }
 

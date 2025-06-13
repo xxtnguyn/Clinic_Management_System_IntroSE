@@ -58,13 +58,5 @@ router.post(
   AuthController.resetPassword
 );
 
-// Route: POST /api/auth/reset-password
-// Mô tả: Đặt lại mật khẩu với token
-// Quyền: Không yêu cầu xác thực
-router.post(
-  '/reset-password',
-  validate(resetPasswordSchema),
-  AuthController.resetPassword
-);
 
 module.exports = router;

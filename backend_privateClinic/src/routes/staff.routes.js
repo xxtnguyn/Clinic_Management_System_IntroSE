@@ -83,4 +83,15 @@ router.delete(
   StaffController.deleteStaff
 );
 
+// Route: POST /api/staff/:id/upload-avatar
+// Mô tả: Tải lên ảnh đại diện cho nhân viên
+// Quyền: update_staff hoặc chính nhân viên đó
+const upload = require('../middlewares/upload.middleware');
+router.post(
+  '/:id/upload-avatar',
+  authenticate,
+  upload.single('avatar'),
+  StaffController.uploadAvatar
+);
+
 module.exports = router;

@@ -2,6 +2,33 @@ const Joi = require('joi');
 
 // Schema cho tạo nhân viên mới
 const createStaffSchema = Joi.object({
+  // Hỗ trợ cả role_id và roleId, ít nhất một trong hai phải được cung cấp
+  role_id: Joi.number()
+    .integer()
+    .min(1)
+    .optional()
+    .messages({
+      'number.base': 'ID vai trò phải là số',
+      'number.integer': 'ID vai trò phải là số nguyên',
+      'number.min': 'ID vai trò phải lớn hơn 0'
+    }),
+    
+  roleId: Joi.number()
+    .integer()
+    .min(1)
+    .optional()
+    .messages({
+      'number.base': 'ID vai trò phải là số',
+      'number.integer': 'ID vai trò phải là số nguyên',
+      'number.min': 'ID vai trò phải lớn hơn 0'
+    })
+    .when('role_id', {
+      is: Joi.exist(),
+      then: Joi.forbidden().messages({
+        'any.unknown': 'Chỉ được cung cấp role_id hoặc roleId, không được cung cấp cả hai'
+      })
+    }),
+    
   username: Joi.string()
     .min(3)
     .max(50)
@@ -56,16 +83,29 @@ const createStaffSchema = Joi.object({
     }),
 
   address: Joi.string().allow('', null),
-
-  role_id: Joi.number()
-    .integer()
-    .min(1)
+  
+  gender: Joi.string()
+    .valid('Nam', 'Nữ', 'Khác')
     .required()
     .messages({
-      'number.base': 'ID vai trò phải là số',
-      'number.integer': 'ID vai trò phải là số nguyên',
-      'number.min': 'ID vai trò phải lớn hơn 0',
-      'any.required': 'ID vai trò là bắt buộc'
+      'string.empty': 'Giới tính không được để trống',
+      'any.only': 'Giới tính phải là Nam, Nữ hoặc Khác',
+      'any.required': 'Giới tính là bắt buộc'
+    }),
+    
+  birth_date: Joi.date()
+    .max('now')
+    .required()
+    .messages({
+      'date.base': 'Ngày sinh không hợp lệ',
+      'date.max': 'Ngày sinh không được lớn hơn ngày hiện tại',
+      'any.required': 'Ngày sinh là bắt buộc'
+    }),
+    
+  avatar: Joi.string()
+    .default('default-avatar.png')
+    .messages({
+      'string.uri': 'Đường dẫn avatar không hợp lệ'
     }),
 
   is_active: Joi.boolean()
@@ -99,6 +139,26 @@ const updateStaffSchema = Joi.object({
     }),
 
   address: Joi.string().allow('', null),
+  
+  gender: Joi.string()
+    .valid('Nam', 'Nữ', 'Khác')
+    .messages({
+      'string.empty': 'Giới tính không được để trống',
+      'any.only': 'Giới tính phải là Nam, Nữ hoặc Khác'
+    }),
+    
+  birth_date: Joi.date()
+    .max('now')
+    .messages({
+      'date.base': 'Ngày sinh không hợp lệ',
+      'date.max': 'Ngày sinh không được lớn hơn ngày hiện tại'
+    }),
+    
+  avatar: Joi.string()
+    .uri()
+    .messages({
+      'string.uri': 'Đường dẫn avatar không hợp lệ'
+    }),
 
   role_id: Joi.number()
     .integer()
@@ -146,10 +206,18 @@ const changePasswordSchema = Joi.object({
     })
 }).with('new_password', 'confirm_password');
 
-const staffSchema = {
+// Schema cho upload avatar
+const uploadAvatarSchema = Joi.object({
+  avatar: Joi.any()
+    .required()
+    .messages({
+      'any.required': 'Vui lòng chọn ảnh đại diện'
+    })
+});
+
+module.exports = {
   createStaffSchema,
   updateStaffSchema,
-  changePasswordSchema
+  changePasswordSchema,
+  uploadAvatarSchema
 };
-
-module.exports = staffSchema;
