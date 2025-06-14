@@ -1,627 +1,570 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
-const { NotFoundError, ConflictError, DatabaseError } = require('../utils/apiError');
+const path = require('path');
+const { 
+  NotFoundError, 
+  ConflictError, 
+  DatabaseError, 
+  ValidationError 
+} = require('../utils/apiError');
+
+// Constants
+const AVATAR_BASE_PATH = '/uploads/avatars/';
+const DEFAULT_AVATAR = 'default-avatar.png';
+const VALID_GENDERS = ['Nam', 'Nữ', 'Khác'];
+
+/**
+ * Format avatar path
+ * @param {string} avatar - Avatar filename or full path
+ * @returns {string} Full avatar path
+ */
+function formatAvatarPath(avatar) {
+  if (!avatar) {
+    // Use string concatenation with forward slashes for consistent path format
+    const defaultPath = `${AVATAR_BASE_PATH}${DEFAULT_AVATAR}`.replace(/\\/g, '/');
+    return defaultPath;
+  }
+  if (avatar.startsWith('http')) return avatar;
+  
+  // Convert any backslashes to forward slashes for consistency
+  if (path.isAbsolute(avatar)) {
+    return avatar.replace(/\\/g, '/');
+  }
+  
+  // Join paths and ensure forward slashes
+  const fullPath = `${AVATAR_BASE_PATH}${avatar}`.replace(/\\/g, '/');
+  return fullPath;
+}
 
 /**
  * Staff Model
- * Quản lý thao tác với bảng staff (nhân viên y tế)
+ * Handles database operations for staff members
  */
 class Staff {
   /**
-   * Lấy danh sách tất cả nhân viên
-   * @param {Object} options - Các tùy chọn lọc và phân trang
-   * @returns {Promise<Array>} Danh sách nhân viên
-   */
-  static async findAll(options = {}) {
-    const { 
-      search = '', 
-      page = 1, 
-      limit = 10, 
-      roleId = null,
-      isActive = null 
-    } = options;
-    
-    const offset = (page - 1) * limit;
-    const queryParams = [];
-    let paramCount = 1;
-    
-    // Xây dựng câu truy vấn cơ bản
-    let query = `
-      SELECT 
-        s.id, s.username, s.full_name, s.email, s.phone, s.address, 
-        s.is_active, s.created_at, s.updated_at,
-        r.id as role_id, r.name as role_name
-      FROM staff s
-      JOIN roles r ON s.role_id = r.id
-      WHERE 1=1
-    `;
-    
-    // Thêm điều kiện tìm kiếm
-    if (search) {
-      query += ` AND (
-        s.full_name ILIKE $${paramCount} OR
-        s.username ILIKE $${paramCount} OR
-        s.email ILIKE $${paramCount} OR
-        s.phone ILIKE $${paramCount}
-      )`;
-      queryParams.push(`%${search}%`);
-      paramCount++;
-    }
-    
-    // Lọc theo roleId
-    if (roleId) {
-      query += ` AND s.role_id = $${paramCount}`;
-      queryParams.push(roleId);
-      paramCount++;
-    }
-    
-    // Lọc theo trạng thái hoạt động
-    if (isActive !== null) {
-      query += ` AND s.is_active = $${paramCount}`;
-      queryParams.push(isActive);
-      paramCount++;
-    }
-    
-    // Đếm tổng số nhân viên phù hợp với điều kiện lọc
-    const countQuery = query.replace(
-      'SELECT s.id, s.username, s.full_name, s.email, s.phone, s.address, s.is_active, s.created_at, s.updated_at, r.id as role_id, r.name as role_name',
-      'SELECT COUNT(*)'
-    );
-    
-    // Thêm sắp xếp và phân trang
-    query += ` ORDER BY s.full_name ASC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    queryParams.push(limit, offset);
-    
-    // Thực hiện truy vấn
-    const { rows } = await db.query(query, queryParams);
-    const countResult = await db.query(countQuery, queryParams.slice(0, paramCount - 1));
-    const total = parseInt(countResult.rows[0].count);
-    
-    // Định dạng lại dữ liệu trả về
-    const staffList = rows.map(row => ({
-      id: row.id,
-      username: row.username,
-      fullName: row.full_name,
-      email: row.email,
-      phone: row.phone,
-      address: row.address,
-      isActive: row.is_active,
-      role: {
-        id: row.role_id,
-        name: row.role_name
-      },
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    }));
-    
-    return {
-      data: staffList,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit)
-      }
-    };
-  }
-  
-  /**
-   * Tìm nhân viên theo ID
-   * @param {Number} id - ID của nhân viên
-   * @param {Boolean} includePassword - Có bao gồm mật khẩu hay không
-   * @returns {Promise<Object>} Thông tin nhân viên
-   */
-  static async findById(id, includePassword = false) {
-    const query = `
-      SELECT 
-        s.id, s.username, s.full_name, s.email, s.phone, s.address, 
-        ${includePassword ? 's.password,' : ''}
-        s.is_active, s.created_at, s.updated_at,
-        r.id as role_id, r.name as role_name
-      FROM staff s
-      JOIN roles r ON s.role_id = r.id
-      WHERE s.id = $1
-    `;
-    
-    const { rows } = await db.query(query, [id]);
-    
-    if (rows.length === 0) {
-      throw new NotFoundError('Không tìm thấy nhân viên');
-    }
-    
-    const staff = rows[0];
-    
-    return {
-      id: staff.id,
-      username: staff.username,
-      fullName: staff.full_name,
-      email: staff.email,
-      phone: staff.phone,
-      address: staff.address,
-      ...(includePassword && { password: staff.password }),
-      isActive: staff.is_active,
-      role: {
-        id: staff.role_id,
-        name: staff.role_name
-      },
-      createdAt: staff.created_at,
-      updatedAt: staff.updated_at
-    };
-  }
-  
-  /**
-   * Tìm nhân viên theo username
-   * @param {String} username - Tên đăng nhập
-   * @param {Boolean} includePassword - Có bao gồm mật khẩu hay không
-   * @returns {Promise<Object>} Thông tin nhân viên
-   */
-  static async findByUsername(username, includePassword = false) {
-    const query = `
-      SELECT 
-        s.id, s.username, s.full_name, s.email, s.phone, s.address, 
-        ${includePassword ? 's.password,' : ''}
-        s.is_active, s.created_at, s.updated_at,
-        r.id as role_id, r.name as role_name
-      FROM staff s
-      JOIN roles r ON s.role_id = r.id
-      WHERE s.username = $1
-    `;
-    
-    const { rows } = await db.query(query, [username]);
-    
-    if (rows.length === 0) {
-      throw new NotFoundError('Không tìm thấy nhân viên');
-    }
-    
-    const staff = rows[0];
-    
-    return {
-      id: staff.id,
-      username: staff.username,
-      fullName: staff.full_name,
-      email: staff.email,
-      phone: staff.phone,
-      address: staff.address,
-      ...(includePassword && { password: staff.password }),
-      isActive: staff.is_active,
-      role: {
-        id: staff.role_id,
-        name: staff.role_name
-      },
-      createdAt: staff.created_at,
-      updatedAt: staff.updated_at
-    };
-  }
-  
-  /**
-   * Tạo nhân viên mới
-   * @param {Object} data - Dữ liệu nhân viên
-   * @returns {Promise<Object>} Nhân viên mới tạo
+   * Create a new staff member
+   * @param {Object} data - Staff data
+   * @returns {Promise<Object>} Created staff member
    */
   static async create(data) {
     try {
-      const { 
-        username, 
-        fullName, 
-        email, 
-        phone, 
-        address, 
-        password, 
-        roleId,
-        isActive = true 
-      } = data;
+      // Validate input data
+      this.validateStaffData(data);
       
-      // Hash mật khẩu nếu có
-      let hashedPassword = null;
-      if (password) {
-        const salt = await bcrypt.genSalt(10);
-        hashedPassword = await bcrypt.hash(password, salt);
-      }
+      // Check for duplicates
+      await this.checkForDuplicates(data);
       
+      // Hash password
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      
+      // Prepare staff data
+      const staffData = {
+        username: data.username,
+        full_name: data.fullName || data.full_name,
+        email: data.email,
+        phone: data.phone || null,
+        address: data.address || null,
+        password: hashedPassword,
+        role_id: data.roleId || data.role_id,
+        gender: this.normalizeGender(data.gender),
+        birth_date: data.birthDate || data.birth_date,
+        avatar: data.avatar ? formatAvatarPath(data.avatar) : null,
+        is_active: data.isActive !== undefined ? data.isActive : true
+      };
+      
+      // Insert into database
       const query = `
         INSERT INTO staff (
-          username, full_name, email, phone, address, password, role_id, is_active
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, username, full_name, email, phone, address, is_active, role_id, created_at, updated_at
+          username, full_name, email, phone, address, 
+          password, role_id, gender, birth_date, avatar, is_active
+        ) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
       `;
       
       const values = [
-        username,
-        fullName,
-        email,
-        phone,
-        address,
-        hashedPassword,
-        roleId,
-        isActive
+        staffData.username,
+        staffData.full_name,
+        staffData.email,
+        staffData.phone,
+        staffData.address,
+        staffData.password,
+        staffData.role_id,
+        staffData.gender,
+        staffData.birth_date,
+        staffData.avatar,
+        staffData.is_active
       ];
       
       const { rows } = await db.query(query, values);
+      return this.formatStaffResponse(rows[0]);
       
-      // Lấy thông tin role
-      const roleQuery = 'SELECT id, name FROM roles WHERE id = $1';
-      const roleResult = await db.query(roleQuery, [roleId]);
-      
-      return {
-        id: rows[0].id,
-        username: rows[0].username,
-        fullName: rows[0].full_name,
-        email: rows[0].email,
-        phone: rows[0].phone,
-        address: rows[0].address,
-        isActive: rows[0].is_active,
-        role: {
-          id: roleResult.rows[0].id,
-          name: roleResult.rows[0].name
-        },
-        createdAt: rows[0].created_at,
-        updatedAt: rows[0].updated_at
-      };
     } catch (error) {
-      // Lỗi unique constraint (username trùng)
-      if (error.code === '23505' && error.constraint === 'staff_username_key') {
-        throw new ConflictError(
-          'Tên đăng nhập đã tồn tại',
-          'Vui lòng chọn tên đăng nhập khác'
-        );
+      console.error('Error creating staff member:', error);
+      
+      if (error instanceof ValidationError || error instanceof ConflictError) {
+        throw error;
       }
       
-      // Lỗi unique constraint (email trùng)
-      if (error.code === '23505' && error.constraint === 'staff_email_key') {
-        throw new ConflictError(
-          'Email đã tồn tại',
-          'Vui lòng sử dụng email khác'
-        );
+      // Handle database constraint errors
+      if (error.code === '23505') { // Unique violation
+        if (error.constraint?.includes('email')) {
+          throw new ConflictError('Email đã được sử dụng');
+        } else if (error.constraint?.includes('phone')) {
+          throw new ConflictError('Số điện thoại đã được sử dụng');
+        } else if (error.constraint?.includes('username')) {
+          throw new ConflictError('Tên đăng nhập đã được sử dụng');
+        }
       }
       
-      // Lỗi unique constraint (phone trùng)
-      if (error.code === '23505' && error.constraint === 'staff_phone_key') {
-        throw new ConflictError(
-          'Số điện thoại đã tồn tại',
-          'Vui lòng sử dụng số điện thoại khác'
-        );
-      }
-      
-      // Lỗi foreign key (roleId không tồn tại)
-      if (error.code === '23503' && error.constraint === 'staff_role_id_fkey') {
-        throw new NotFoundError('Vai trò không tồn tại');
-      }
-      
-      throw error;
+      throw new DatabaseError('Lỗi khi tạo nhân viên mới');
     }
   }
-  
+
   /**
-   * Cập nhật thông tin nhân viên
-   * @param {Number} id - ID của nhân viên
-   * @param {Object} data - Dữ liệu cập nhật
-   * @returns {Promise<Object>} Nhân viên sau khi cập nhật
+   * Find staff by ID
+   * @param {number} id - Staff ID
+   * @param {boolean} includePassword - Whether to include password in response
+   * @returns {Promise<Object>} Staff information
+   */
+  static async findById(id, includePassword = false) {
+    try {
+      const query = `
+        SELECT 
+          s.*,
+          r.id as role_id, 
+          r.name as role_name
+        FROM staff s
+        LEFT JOIN roles r ON s.role_id = r.id
+        WHERE s.id = $1
+      `;
+      
+      const { rows } = await db.query(query, [id]);
+      
+      if (rows.length === 0) {
+        throw new NotFoundError('Không tìm thấy nhân viên');
+      }
+      
+      return this.formatStaffResponse(rows[0], includePassword);
+      
+    } catch (error) {
+      console.error(`Error finding staff with ID ${id}:`, error);
+      if (error instanceof NotFoundError) throw error;
+      throw new DatabaseError('Lỗi khi lấy thông tin nhân viên');
+    }
+  }
+
+  /**
+   * Update staff information
+   * @param {number} id - Staff ID
+   * @param {Object} data - Data to update
+   * @returns {Promise<Object>} Updated staff information
    */
   static async update(id, data) {
-    // Kiểm tra nhân viên tồn tại
-    await this.findById(id);
-    
-    const { 
-      username, 
-      fullName, 
-      email, 
-      phone, 
-      address, 
-      password, 
-      roleId,
-      isActive 
-    } = data;
-    
-    // Chuẩn bị dữ liệu cập nhật
-    const updateFields = [];
-    const values = [];
-    let paramCount = 1;
-    
-    if (username !== undefined) {
-      updateFields.push(`username = $${paramCount}`);
-      values.push(username);
-      paramCount++;
-    }
-    
-    if (fullName !== undefined) {
-      updateFields.push(`full_name = $${paramCount}`);
-      values.push(fullName);
-      paramCount++;
-    }
-    
-    if (email !== undefined) {
-      updateFields.push(`email = $${paramCount}`);
-      values.push(email);
-      paramCount++;
-    }
-    
-    if (phone !== undefined) {
-      updateFields.push(`phone = $${paramCount}`);
-      values.push(phone);
-      paramCount++;
-    }
-    
-    if (address !== undefined) {
-      updateFields.push(`address = $${paramCount}`);
-      values.push(address);
-      paramCount++;
-    }
-    
-    if (password !== undefined) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      updateFields.push(`password = $${paramCount}`);
-      values.push(hashedPassword);
-      paramCount++;
-    }
-    
-    if (roleId !== undefined) {
-      updateFields.push(`role_id = $${paramCount}`);
-      values.push(roleId);
-      paramCount++;
-    }
-    
-    if (isActive !== undefined) {
-      updateFields.push(`is_active = $${paramCount}`);
-      values.push(isActive);
-      paramCount++;
-    }
-    
-    // Nếu không có dữ liệu cập nhật
-    if (updateFields.length === 0) {
-      return this.findById(id);
-    }
-    
     try {
-      // Thêm ID vào cuối mảng values
-      values.push(id);
+      // Get current staff data
+      const currentStaff = await this.findById(id);
+      
+      // Prepare update data
+      const updateData = {
+        full_name: data.fullName || data.full_name || currentStaff.fullName,
+        email: data.email || currentStaff.email,
+        phone: data.phone !== undefined ? data.phone : currentStaff.phone,
+        address: data.address !== undefined ? data.address : currentStaff.address,
+        role_id: data.roleId || data.role_id || currentStaff.role.id,
+        gender: data.gender ? this.normalizeGender(data.gender) : currentStaff.gender,
+        birth_date: data.birthDate || data.birth_date || currentStaff.birthDate,
+        is_active: data.isActive !== undefined ? data.isActive : currentStaff.isActive
+      };
+      
+      // Handle password update
+      if (data.password) {
+        updateData.password = await bcrypt.hash(data.password, 10);
+      }
+      
+      // Handle avatar update
+      let oldAvatar = null;
+      if (data.avatar) {
+        oldAvatar = currentStaff.avatar;
+        updateData.avatar = formatAvatarPath(data.avatar);
+      }
+      
+      // Build dynamic update query
+      const setClause = [];
+      const values = [id];
+      let paramIndex = 2;
+      
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (value !== undefined) {
+          setClause.push(`${key} = $${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
+      });
+      
+      if (setClause.length === 0) {
+        return this.findById(id);
+      }
       
       const query = `
         UPDATE staff
-        SET ${updateFields.join(', ')}
-        WHERE id = $${paramCount}
-        RETURNING id, username, full_name, email, phone, address, is_active, role_id, created_at, updated_at
+        SET ${setClause.join(', ')}, updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
       `;
       
       const { rows } = await db.query(query, values);
       
-      // Lấy thông tin role
-      const roleQuery = 'SELECT id, name FROM roles WHERE id = $1';
-      const roleResult = await db.query(roleQuery, [rows[0].role_id]);
+      if (rows.length === 0) {
+        throw new NotFoundError('Không tìm thấy nhân viên để cập nhật');
+      }
       
-      return {
-        id: rows[0].id,
-        username: rows[0].username,
-        fullName: rows[0].full_name,
-        email: rows[0].email,
-        phone: rows[0].phone,
-        address: rows[0].address,
-        isActive: rows[0].is_active,
-        role: {
-          id: roleResult.rows[0].id,
-          name: roleResult.rows[0].name
-        },
-        createdAt: rows[0].created_at,
-        updatedAt: rows[0].updated_at
-      };
+      const updatedStaff = this.formatStaffResponse(rows[0]);
+      
+      // Return old avatar path if it was updated (for cleanup)
+      if (oldAvatar) {
+        return { ...updatedStaff, oldAvatar };
+      }
+      
+      return updatedStaff;
+      
     } catch (error) {
-      // Lỗi unique constraint (username trùng)
-      if (error.code === '23505' && error.constraint === 'staff_username_key') {
-        throw new ConflictError(
-          'Tên đăng nhập đã tồn tại',
-          'Vui lòng chọn tên đăng nhập khác'
-        );
+      console.error(`Error updating staff with ID ${id}:`, error);
+      
+      if (error instanceof NotFoundError || 
+          error instanceof ValidationError || 
+          error instanceof ConflictError) {
+        throw error;
       }
       
-      // Lỗi unique constraint (email trùng)
-      if (error.code === '23505' && error.constraint === 'staff_email_key') {
-        throw new ConflictError(
-          'Email đã tồn tại',
-          'Vui lòng sử dụng email khác'
-        );
+      // Handle database constraint errors
+      if (error.code === '23505') { // Unique violation
+        if (error.constraint?.includes('email')) {
+          throw new ConflictError('Email đã được sử dụng');
+        } else if (error.constraint?.includes('phone')) {
+          throw new ConflictError('Số điện thoại đã được sử dụng');
+        } else if (error.constraint?.includes('username')) {
+          throw new ConflictError('Tên đăng nhập đã được sử dụng');
+        }
       }
       
-      // Lỗi unique constraint (phone trùng)
-      if (error.code === '23505' && error.constraint === 'staff_phone_key') {
-        throw new ConflictError(
-          'Số điện thoại đã tồn tại',
-          'Vui lòng sử dụng số điện thoại khác'
-        );
-      }
-      
-      // Lỗi foreign key (roleId không tồn tại)
-      if (error.code === '23503' && error.constraint === 'staff_role_id_fkey') {
-        throw new NotFoundError('Vai trò không tồn tại');
-      }
-      
-      throw error;
+      throw new DatabaseError('Lỗi khi cập nhật thông tin nhân viên');
     }
   }
-  
+
   /**
-   * Thay đổi mật khẩu nhân viên
-   * @param {Number} id - ID của nhân viên
-   * @param {String} currentPassword - Mật khẩu hiện tại
-   * @param {String} newPassword - Mật khẩu mới
-   * @returns {Promise<Boolean>} Kết quả thay đổi mật khẩu
-   * @throws {ValidationError} Nếu mật khẩu hiện tại không đúng
-   */
-  static async changePassword(id, currentPassword, newPassword) {
-    // Lấy thông tin nhân viên kèm mật khẩu
-    const staff = await this.findById(id, true);
-    
-    // Kiểm tra mật khẩu hiện tại
-    const isMatch = await bcrypt.compare(currentPassword, staff.password);
-    if (!isMatch) {
-      throw new ValidationError('Mật khẩu hiện tại không đúng');
-    }
-    
-    // Hash mật khẩu mới
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-    
-    // Cập nhật mật khẩu mới
-    const query = 'UPDATE staff SET password = $1, updated_at = NOW() WHERE id = $2';
-    await db.query(query, [hashedPassword, id]);
-    
-    return true;
-  }
-  
-  /**
-   * Thay đổi trạng thái hoạt động của nhân viên
-   * @param {Number} id - ID của nhân viên
-   * @param {Boolean} isActive - Trạng thái hoạt động mới
-   * @returns {Promise<Object>} Nhân viên sau khi cập nhật
-   */
-  static async changeStatus(id, isActive) {
-    // Kiểm tra nhân viên tồn tại
-    await this.findById(id);
-    
-    const query = `
-      UPDATE staff SET is_active = $1 WHERE id = $2
-      RETURNING id, username, full_name, email, phone, address, is_active, role_id, created_at, updated_at
-    `;
-    
-    const { rows } = await db.query(query, [isActive, id]);
-    
-    // Lấy thông tin role
-    const roleQuery = 'SELECT id, name FROM roles WHERE id = $1';
-    const roleResult = await db.query(roleQuery, [rows[0].role_id]);
-    
-    return {
-      id: rows[0].id,
-      username: rows[0].username,
-      fullName: rows[0].full_name,
-      email: rows[0].email,
-      phone: rows[0].phone,
-      address: rows[0].address,
-      isActive: rows[0].is_active,
-      role: {
-        id: roleResult.rows[0].id,
-        name: roleResult.rows[0].name
-      },
-      createdAt: rows[0].created_at,
-      updatedAt: rows[0].updated_at
-    };
-  }
-  
-  /**
-   * Xóa nhân viên
-   * @param {Number} id - ID của nhân viên
-   * @returns {Promise<Boolean>} Kết quả xóa
+   * Delete a staff member
+   * @param {number} id - Staff ID
+   * @returns {Promise<boolean>} True if deleted successfully
    */
   static async delete(id) {
-    // Kiểm tra nhân viên tồn tại
-    await this.findById(id);
-    
     try {
-      const query = 'DELETE FROM staff WHERE id = $1';
-      await db.query(query, [id]);
-      return true;
-    } catch (error) {
-      if (error.code === '23503') { // Foreign key constraint violation
-        throw new DatabaseError(
-          'Không thể xóa nhân viên này vì đã có dữ liệu liên quan',
-          'Nhân viên đã được liên kết với các bản ghi khác',
-          'Vui lòng vô hiệu hóa tài khoản thay vì xóa'
-        );
+      // First get the staff to return avatar path for cleanup
+      const staff = await this.findById(id);
+      
+      const query = 'DELETE FROM staff WHERE id = $1 RETURNING id';
+      const { rowCount } = await db.query(query, [id]);
+      
+      if (rowCount === 0) {
+        throw new NotFoundError('Không tìm thấy nhân viên để xóa');
       }
-      throw error;
+      
+      // Return staff data for cleanup (e.g., avatar file)
+      return { success: true, avatar: staff.avatar };
+      
+    } catch (error) {
+      console.error(`Error deleting staff with ID ${id}:`, error);
+      
+      if (error instanceof NotFoundError) throw error;
+      
+      // Handle foreign key constraint
+      if (error.code === '23503') { // Foreign key violation
+        throw new ConflictError('Không thể xóa nhân viên vì có dữ liệu liên quan');
+      }
+      
+      throw new DatabaseError('Lỗi khi xóa nhân viên');
     }
   }
 
   /**
-   * Kiểm tra username đã tồn tại chưa
-   * @param {String} username - Username cần kiểm tra
-   * @param {Number} [excludeId=null] - ID nhân viên cần loại trừ (dùng khi cập nhật)
-   * @returns {Promise<Boolean>} true nếu đã tồn tại, false nếu chưa
+   * Find all staff with pagination and filtering
+   * @param {Object} options - Query options
+   * @param {number} [options.page=1] - Page number
+   * @param {number} [options.limit=10] - Items per page
+   * @param {string} [options.search] - Search term
+   * @param {string} [options.role] - Role filter
+   * @param {boolean} [options.isActive] - Active status filter
+   * @returns {Promise<Object>} Paginated staff list
    */
-  static async isUsernameExists(username, excludeId = null) {
-    const query = `
-      SELECT EXISTS(
-        SELECT 1 FROM staff 
-        WHERE LOWER(TRIM(username)) = LOWER(TRIM($1))
-        ${excludeId ? 'AND id != $2' : ''}
-      ) as exists
-    `;
-    
-    const params = [username];
-    if (excludeId) params.push(excludeId);
-    
-    const { rows } = await db.query(query, params);
-    return rows[0].exists;
+  static async findAll({
+    page = 1,
+    limit = 10,
+    search,
+    role,
+    isActive
+  } = {}) {
+    try {
+      // Build WHERE conditions
+      const conditions = [];
+      const params = [];
+      let paramIndex = 1;
+      
+      if (search) {
+        conditions.push(`(
+          s.username ILIKE $${paramIndex} OR 
+          s.full_name ILIKE $${paramIndex} OR 
+          s.email ILIKE $${paramIndex} OR
+          s.phone ILIKE $${paramIndex}
+        )`);
+        params.push(`%${search}%`);
+        paramIndex++;
+      }
+      
+      if (role) {
+        conditions.push(`r.id = $${paramIndex}`);
+        params.push(role);
+        paramIndex++;
+      }
+      
+      if (isActive !== undefined) {
+        conditions.push(`s.is_active = $${paramIndex}`);
+        params.push(isActive);
+        paramIndex++;
+      }
+      
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      
+      // Count total matching records
+      const countQuery = `
+        SELECT COUNT(*) as total
+        FROM staff s
+        LEFT JOIN roles r ON s.role_id = r.id
+        ${whereClause}
+      `;
+      
+      const countResult = await db.query(countQuery, params);
+      const total = parseInt(countResult.rows[0].total, 10);
+      const totalPages = Math.ceil(total / limit);
+      const offset = (page - 1) * limit;
+      
+      // Get paginated results
+      const query = `
+        SELECT 
+          s.*,
+          r.id as role_id, 
+          r.name as role_name
+        FROM staff s
+        LEFT JOIN roles r ON s.role_id = r.id
+        ${whereClause}
+        ORDER BY s.created_at DESC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
+      
+      const { rows } = await db.query(query, [...params, limit, offset]);
+      
+      return {
+        data: rows.map(staff => this.formatStaffResponse(staff)),
+        pagination: {
+          page: parseInt(page, 10),
+          limit: parseInt(limit, 10),
+          total,
+          totalPages
+        }
+      };
+      
+    } catch (error) {
+      console.error('Error finding staff:', error);
+      throw new DatabaseError('Lỗi khi lấy danh sách nhân viên');
+    }
   }
 
   /**
-   * Kiểm tra email đã tồn tại chưa
-   * @param {String} email - Email cần kiểm tra
-   * @param {Number} [excludeId=null] - ID nhân viên cần loại trừ (dùng khi cập nhật)
-   * @returns {Promise<Boolean>} true nếu đã tồn tại, false nếu chưa
+   * Find staff by username
+   * @param {string} username - Username
+   * @param {boolean} includePassword - Whether to include password in response
+   * @returns {Promise<Object>} Staff information
+   */
+  static async findByUsername(username, includePassword = false) {
+    try {
+      const query = `
+        SELECT 
+          s.*,
+          r.id as role_id, 
+          r.name as role_name
+        FROM staff s
+        LEFT JOIN roles r ON s.role_id = r.id
+        WHERE s.username = $1
+      `;
+      
+      const { rows } = await db.query(query, [username]);
+      
+      if (rows.length === 0) {
+        throw new NotFoundError('Không tìm thấy nhân viên');
+      }
+      
+      return this.formatStaffResponse(rows[0], includePassword);
+      
+    } catch (error) {
+      console.error(`Error finding staff with username ${username}:`, error);
+      if (error instanceof NotFoundError) throw error;
+      throw new DatabaseError('Lỗi khi lấy thông tin nhân viên');
+    }
+  }
+
+  /**
+   * Check if username exists
+   * @param {string} username - Username to check
+   * @param {number} excludeId - Staff ID to exclude from check
+   * @returns {Promise<boolean>} Whether username exists
+   */
+  static async isUsernameExists(username, excludeId = null) {
+    if (!username) return false;
+    
+    const query = 'SELECT id FROM staff WHERE username = $1' + 
+                 (excludeId ? ' AND id != $2' : '');
+    const params = excludeId ? [username, excludeId] : [username];
+    
+    const { rows } = await db.query(query, params);
+    return rows.length > 0;
+  }
+
+  /**
+   * Check if email exists
+   * @param {string} email - Email to check
+   * @param {number} excludeId - Staff ID to exclude from check
+   * @returns {Promise<boolean>} Whether email exists
    */
   static async isEmailExists(email, excludeId = null) {
     if (!email) return false;
     
-    const query = `
-      SELECT EXISTS(
-        SELECT 1 FROM staff 
-        WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
-        ${excludeId ? 'AND id != $2' : ''}
-      ) as exists
-    `;
-    
-    const params = [email];
-    if (excludeId) params.push(excludeId);
+    const query = 'SELECT id FROM staff WHERE email = $1' + 
+                 (excludeId ? ' AND id != $2' : '');
+    const params = excludeId ? [email, excludeId] : [email];
     
     const { rows } = await db.query(query, params);
-    return rows[0].exists;
+    return rows.length > 0;
   }
 
   /**
-   * Kiểm tra số điện thoại đã tồn tại chưa
-   * @param {String} phone - Số điện thoại cần kiểm tra
-   * @param {Number} [excludeId=null] - ID nhân viên cần loại trừ (dùng khi cập nhật)
-   * @returns {Promise<Boolean>} true nếu đã tồn tại, false nếu chưa
+   * Check if phone exists
+   * @param {string} phone - Phone number to check
+   * @param {number} excludeId - Staff ID to exclude from check
+   * @returns {Promise<boolean>} Whether phone exists
    */
   static async isPhoneExists(phone, excludeId = null) {
     if (!phone) return false;
     
-    const query = `
-      SELECT EXISTS(
-        SELECT 1 FROM staff 
-        WHERE phone = $1
-        ${excludeId ? 'AND id != $2' : ''}
-      ) as exists
-    `;
-    
-    const params = [phone];
-    if (excludeId) params.push(excludeId);
+    const query = 'SELECT id FROM staff WHERE phone = $1' + 
+                 (excludeId ? ' AND id != $2' : '');
+    const params = excludeId ? [phone, excludeId] : [phone];
     
     const { rows } = await db.query(query, params);
-    return rows[0].exists;
+    return rows.length > 0;
   }
 
   /**
-   * Kiểm tra trùng lặp
-   * @param {String} field - Trường cần kiểm tra
-   * @param {String} value - Giá trị cần kiểm tra
-   * @param {Number} [excludeId=null] - ID nhân viên cần loại trừ (dùng khi cập nhật)
-   * @returns {Promise<Boolean>} true nếu đã tồn tại, false nếu chưa
+   * Normalize gender value
+   * @param {string} gender - Gender value to normalize
+   * @returns {string} Normalized gender value
    */
-  static async isExists(field, value, excludeId = null) {
-    const query = `
-      SELECT EXISTS(
-        SELECT 1 FROM staff 
-        WHERE ${field} = $1
-        ${excludeId ? 'AND id != $2' : ''}
-      ) as exists
-    `;
+  static normalizeGender(gender) {
+    if (!gender) return 'Khác';
     
-    const params = [value];
-    if (excludeId) params.push(excludeId);
+    const genderMap = {
+      'm': 'Nam',
+      'male': 'Nam',
+      'nam': 'Nam',
+      'f': 'Nữ',
+      'female': 'Nữ',
+      'nu': 'Nữ',
+      'nữ': 'Nữ',
+      'o': 'Khác',
+      'other': 'Khác',
+      'khac': 'Khác',
+      'khác': 'Khác'
+    };
     
-    const { rows } = await db.query(query, params);
-    return rows[0].exists;
+    return genderMap[String(gender).toLowerCase()] || 'Khác';
+  }
+
+  /**
+   * Validate staff data
+   * @param {Object} data - Staff data to validate
+   * @throws {ValidationError} If validation fails
+   */
+  static validateStaffData(data) {
+    const requiredFields = ['username', 'full_name', 'email', 'password', 'role_id', 'gender', 'birth_date'];
+    const missingFields = requiredFields.filter(field => !data[field]);
+    
+    if (missingFields.length > 0) {
+      throw new ValidationError(`Thiếu các trường bắt buộc: ${missingFields.join(', ')}`);
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+      throw new ValidationError('Định dạng email không hợp lệ');
+    }
+
+    // Validate password strength
+    if (data.password && data.password.length < 6) {
+      throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự');
+    }
+  }
+
+  /**
+   * Check for duplicate fields
+   * @param {Object} data - Staff data to check
+   * @throws {ConflictError} If duplicates found
+   */
+  static async checkForDuplicates(data) {
+    const [usernameExists, emailExists, phoneExists] = await Promise.all([
+      this.isUsernameExists(data.username, data.id),
+      this.isEmailExists(data.email, data.id),
+      data.phone ? this.isPhoneExists(data.phone, data.id) : Promise.resolve(false)
+    ]);
+
+    const errors = [];
+    if (usernameExists) errors.push('tên đăng nhập');
+    if (emailExists) errors.push('email');
+    if (phoneExists) errors.push('số điện thoại');
+
+    if (errors.length > 0) {
+      throw new ConflictError(`Các trường sau đã được sử dụng: ${errors.join(', ')}`);
+    }
+  }
+
+  /**
+   * Format staff response
+   * @param {Object} staff - Staff data from database
+   * @param {boolean} includePassword - Whether to include password in response
+   * @returns {Object} Formatted staff data
+   */
+  static formatStaffResponse(staff, includePassword = false) {
+    const response = {
+      id: staff.id,
+      username: staff.username,
+      fullName: staff.full_name || staff.fullName,
+      email: staff.email,
+      phone: staff.phone,
+      address: staff.address,
+      gender: this.normalizeGender(staff.gender),
+      birthDate: staff.birth_date || staff.birthDate,
+      avatar: staff.avatar || formatAvatarPath(null),
+      isActive: staff.is_active !== undefined ? staff.is_active : staff.isActive,
+      role: {
+        id: staff.role_id || (staff.role ? staff.role.id : null),
+        name: staff.role_name || (staff.role ? staff.role.name : null)
+      },
+      createdAt: staff.created_at || staff.createdAt,
+      updatedAt: staff.updated_at || staff.updatedAt
+    };
+
+    if (includePassword) {
+      response.password = staff.password;
+    }
+
+    return response;
   }
 }
 

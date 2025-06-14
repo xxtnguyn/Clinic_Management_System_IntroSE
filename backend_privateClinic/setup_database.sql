@@ -294,7 +294,7 @@ CREATE TABLE permissions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tạo các bảng có khóa ngoại
+-- Tạo lại bảng với các trường mới
 CREATE TABLE staff (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -303,6 +303,9 @@ CREATE TABLE staff (
     email VARCHAR(100) UNIQUE,
     phone VARCHAR(20),
     address TEXT,
+    gender VARCHAR(10) CHECK (gender IN ('Nam', 'Nữ', 'Khác')),
+    avatar VARCHAR(255),
+    birth_date DATE,
     role_id INTEGER REFERENCES roles(id) ON DELETE RESTRICT,
     is_active BOOLEAN DEFAULT true,
     last_login TIMESTAMP,
@@ -700,11 +703,56 @@ INSERT INTO permissions (name, description) VALUES
     ('delete_setting', 'Xóa cài đặt hệ thống');
 
 -- Chèn dữ liệu vào bảng staff (3 nhân viên mẫu: 1 admin, 1 bác sĩ, 1 tiếp tân)
--- Sử dụng mật khẩu plain text để dễ test
-INSERT INTO staff (username, password, full_name, email, phone, address, role_id, is_active) VALUES
-    ('admin01', '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 'Nguyễn Admin', 'admin@clinic.com', '0901112233', '123 Đường Láng, Hà Nội', 1, true),
-    ('doctor01', '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 'Trần Bác Sĩ', 'doctor@clinic.com', '0902223344', '45 Nguyễn Huệ, TP.HCM', 2, true),
-    ('receptionist01', '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 'Lê Tiếp Tân', 'receptionist@clinic.com', '0903334455', '78 Lê Lợi, Đà Nẵng', 3, true);
+-- Chèn dữ liệu vào bảng staff (3 nhân viên mẫu: 1 admin, 1 bác sĩ, 1 tiếp tân)
+-- Sử dụng mật khẩu đã được hash (mật khẩu gốc: 123456)
+INSERT INTO staff (
+    username, 
+    password, 
+    full_name, 
+    email, 
+    phone, 
+    address, 
+    gender, 
+    avatar, 
+    birth_date, 
+    role_id, 
+    is_active
+) VALUES
+    ('admin01', 
+     '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 
+     'Nguyễn Admin', 
+     'admin@clinic.com', 
+     '0901112233', 
+     '123 Đường Láng, Hà Nội', 
+     'Nam', 
+     '/uploads/avatars/admin-avatar.png', 
+     '1985-05-15', 
+     1, 
+     true),
+     
+    ('doctor01', 
+     '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 
+     'Trần Bác Sĩ', 
+     'doctor@clinic.com', 
+     '0902223344', 
+     '45 Nguyễn Huệ, TP.HCM', 
+     'Nam', 
+     '/uploads/avatars/doctor-avatar.png', 
+     '1990-08-22', 
+     2, 
+     true),
+     
+    ('receptionist01', 
+     '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 
+     'Lê Thị Tiếp Tân', 
+     'receptionist@clinic.com', 
+     '0903334455', 
+     '78 Lê Lợi, Đà Nẵng', 
+     'Nữ', 
+     '/uploads/avatars/receptionist-avatar.png', 
+     '1995-11-30', 
+     3, 
+     true);
 
 -- Phân quyền cho vai trò admin - có tất cả quyền
 INSERT INTO role_permissions (role_id, permission_id)

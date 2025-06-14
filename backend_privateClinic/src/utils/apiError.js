@@ -48,11 +48,20 @@ class DatabaseError extends Error {
   }
 }
 
+class ConflictError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ConflictError';
+    this.statusCode = 409;
+  }
+}
+
 module.exports = {
   NotFoundError,
   AuthenticationError,
   AuthorizationError,
   ValidationError,
   DatabaseError,
-  BadRequestError
+  BadRequestError,
+  ConflictError
 };

@@ -32,6 +32,12 @@ class Appointment {
       JOIN patients p ON a.patient_id = p.id
     `;
     
+    let countQuery = `
+      SELECT COUNT(*) 
+      FROM appointment_lists a
+      JOIN patients p ON a.patient_id = p.id
+    `;
+    
     const queryParams = [];
     let conditions = [];
     
