@@ -8,9 +8,13 @@ const Dashboard: React.FC = () => {
   const location = useLocation();
 
   const { currentUser } = location.state || {};
-  const name = currentUser.full_name;
-  const role = currentUser.role_name;
-  const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
+
+  console.log("location.state", location.state);
+  const name = currentUser.fullName;
+  const role = currentUser?.role?.name || "";
+  const capitalizedRole = role
+    ? role.charAt(0).toUpperCase() + role.slice(1)
+    : "";
 
   return (
     <div className="min-h-screen w-full">

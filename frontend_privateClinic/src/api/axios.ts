@@ -25,13 +25,21 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized error (e.g., redirect to login)
+    const status = error.response?.status;
+    const message = error.response?.data?.message;
+
+    // Không tự động redirect 401 — để mỗi component xử lý lỗi riêng
+    if (status === 401 && !message) {
       localStorage.removeItem("token");
-      window.location.href = "/signin";
+      window.location.href = "/";
     }
+
+    // Luôn ném lỗi ra để component bắt và hiển thị
     return Promise.reject(error);
   }
 );
+
+
+
 
 export default axiosInstance;

@@ -4,31 +4,57 @@ import HeaderDashboard from "../components/HeaderDashboard";
 import defaultAvatar from "../assets/medical-bg.png";
 import profileIcon from "../assets/profile_icon.png";
 import passwordIcon from "../assets/password_icon.png";
+import staffService from "../api/staff.service";
+import { authService } from "../api/auth.service";
+import type { Staff } from "../api/staff.service";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+
+interface Role {
+  id: number;
+  name: string;
+}
 
 interface User {
-  email: string;
-  full_name: string;
   id: number;
-  is_active: boolean;
-  last_login: string;
-  permissions: Array<string>;
-  phone: string;
-  role_id: number;
-  role_name: string;
   username: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  gender: string;
+  birthDate: string;
+  avatar: string | null;
+  isActive: boolean;
+  role: Role;
 }
 
 interface ProfileFormData {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   phoneNumber: string;
   address: string;
   gender: string;
+  birthDate: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+// Thêm interface cho error messages
+interface PasswordErrors {
+  currentPassword?: string;
+  newPassword?: string;
+  confirmPassword?: string;
+  general?: string;
 }
 
 const Profile = () => {
   const location = useLocation();
   const { user } = location.state || {};
+  const [currentUser, setCurrentUser] = useState<User | null>(user || null);
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [profileImage, setProfileImage] = useState<string>(defaultAvatar);
@@ -36,14 +62,60 @@ const Profile = () => {
     "personal"
   );
   const [isBlue, setIsBlue] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: string; text: string } | null>(
+    null
+  );
 
   const [formData, setFormData] = useState<ProfileFormData>({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     phoneNumber: "",
     address: "",
     gender: "male",
+    birthDate: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
+
+  // Thêm state cho error messages
+  const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
+
+  // Hàm chuyển đổi giới tính từ tiếng Việt sang tiếng Anh
+  const mapGenderToEnglish = (gender: string): string => {
+    switch (gender.toLowerCase()) {
+      case "nam":
+        return "male";
+      case "nữ":
+        return "female";
+      default:
+        return "other";
+    }
+  };
+
+  // Hàm chuyển đổi giới tính từ tiếng Anh sang tiếng Việt
+  const mapGenderToVietnamese = (gender: string): string => {
+    switch (gender.toLowerCase()) {
+      case "male":
+        return "Nam";
+      case "female":
+        return "Nữ";
+      default:
+        return "Khác";
+    }
+  };
+
+  // Hàm format ngày tháng từ ISO string sang YYYY-MM-DD
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // getMonth() trả về 0-11
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setIsBlue(true), 100);
@@ -52,16 +124,25 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      const fullNameParts = user.full_name?.split(" ") || [];
-      const lastName = fullNameParts.pop() || "";
-      const firstName = fullNameParts.join(" ");
+      console.log("User object:", user);
+      if (user.avatar) {
+        const avatarUrl = `${import.meta.env.VITE_BACKEND_URL}${user.avatar}`;
+        console.log("Avatar URL:", avatarUrl); // ➜ kiểm tra URL có đúng không
+        // console.log("Avatar:", user.avatar);
+        setProfileImage(user.avatar);
+      } else {
+        setProfileImage(defaultAvatar);
+      }
 
       setFormData({
-        firstName,
-        lastName,
+        fullName: user.fullName || "",
         phoneNumber: user.phone || "",
-        address: "",
-        gender: "male",
+        address: user.address || "",
+        gender: mapGenderToEnglish(user.gender),
+        birthDate: formatDate(user.birthDate),
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
     }
   }, [user]);
@@ -89,15 +170,114 @@ const Profile = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Profile form submitted:", formData);
-    setIsEditing(false);
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      const updateData: Partial<Staff> = {
+        full_name: formData.fullName,
+        phone: formData.phoneNumber,
+        address: formData.address,
+        gender: mapGenderToVietnamese(formData.gender),
+        birth_date: formData.birthDate,
+        avatar: profileImage.startsWith("http")
+          ? profileImage
+          : `${import.meta.env.VITE_BACKEND_URL}${profileImage}`,
+      };
+
+      console.log("Dữ liệu gửi lên:", updateData);
+
+      const response = await staffService.update(user.id, updateData);
+      const updatedStaff = response.data.data;
+
+      // ✅ Gộp role.name từ user cũ nếu backend không trả về
+      const fullUpdatedUser = {
+        ...user, // giữ lại tất cả thông tin cũ (gồm role.name)
+        ...updatedStaff, // ghi đè field mới
+        role: {
+          id: updatedStaff.role_id ?? user.role.id,
+          name: user.role.name, // giữ nguyên name cũ
+        },
+      };
+
+      // ✅ Cập nhật localStorage
+      localStorage.setItem("user", JSON.stringify(fullUpdatedUser));
+
+      // ✅ Nếu dùng location.state thì cập nhật luôn
+      if (location.state) {
+        location.state.user = fullUpdatedUser;
+      }
+
+      setMessage({
+        type: "success",
+        text: response.data.message || "Cập nhật thông tin thành công",
+      });
+      setIsEditing(false);
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Cập nhật thông tin thất bại",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleImageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Image form submitted:", profileImage);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setPasswordErrors({});
+
+    // Kiểm tra mật khẩu mới và xác nhận có khớp nhau không
+    if (formData.newPassword !== formData.confirmPassword) {
+      setPasswordErrors({
+        confirmPassword: "Mật khẩu mới và xác nhận mật khẩu không khớp",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Gọi API đổi mật khẩu
+      await authService.changePassword(
+        formData.currentPassword,
+        formData.newPassword
+      );
+
+      // Thành công
+      setPasswordErrors({
+        general: "Đổi mật khẩu thành công",
+      });
+
+      // Reset form
+      setFormData({
+        ...formData,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error: any) {
+      const backendMsg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Đổi mật khẩu thất bại";
+
+      setPasswordErrors({
+        general: backendMsg,
+      });
+    } finally {
+      setIsLoading(false); // luôn được gọi
+    }
   };
 
   if (!user) {
@@ -108,16 +288,20 @@ const Profile = () => {
     );
   }
 
+  console.log("Current user used in HeaderDashboard:", user);
+  console.log("New password:", formData.newPassword);
+  console.log("Confirm password:", formData.confirmPassword);
   return (
     <div
       className={`min-h-screen w-full flex items-center justify-center transition-colors duration-1000 ${
-        isBlue ? "bg-gradient-to-tr from-green-200 via-blue-200 to-indigo-500" : "bg-white"
+        isBlue
+          ? "bg-gradient-to-tr from-green-200 via-blue-200 to-indigo-500"
+          : "bg-white"
       }`}
     >
       <HeaderDashboard currentUser={user} />
       <main className="flex-grow container mx-auto px-4 py-8 mt-0">
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar with image + tabs */}
           <form
             onSubmit={handleImageSubmit}
             className="relative bg-white rounded-lg shadow-lg p-6 flex flex-col items-center"
@@ -128,17 +312,22 @@ const Profile = () => {
               marginTop: "7rem",
             }}
           >
-            <img
-              src={profileImage}
-              alt="Profile"
+            <div
               className="w-48 h-48 rounded-full p-1 bg-gradient-to-tr from-green-200 via-blue-300 to-indigo-500 shadow-xl"
               style={{ marginTop: "-8rem" }}
-            />
+            >
+              <img
+                src={profileImage}
+                alt="Profile"
+                className="w-full h-full rounded-full object-cover"
+              />
+            </div>
+
             <div className="mt-6 text-center w-full">
               <h2 className="text-xl font-semibold text-gray-800">
-                {user.full_name}
+                {user.fullName}
               </h2>
-              <p className="text-blue-600 font-medium mt-1">{user.role_name}</p>
+              <p className="text-blue-600 font-medium mt-1">{user.role.name}</p>
               <p className="text-gray-600 mt-1">{user.email}</p>
             </div>
 
@@ -171,11 +360,10 @@ const Profile = () => {
                 onClick={() => setActiveTab("credentials")}
               >
                 <img src={passwordIcon} alt="icon" className="w-5 h-5 mr-3" />
-                Email and Password
+                Change Password
               </button>
             </div>
           </form>
-
 
           {/* Main content panel */}
           {activeTab === "personal" ? (
@@ -183,8 +371,7 @@ const Profile = () => {
               className="w-full md:w-2/3 bg-white rounded-lg shadow-lg p-10 m-4 mt-12 overflow-auto"
               style={{
                 boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
-                maxHeight: "32rem",
-                // marginTop: "3rem",
+                maxHeight: "38rem",
               }}
               onSubmit={handleSubmit}
             >
@@ -192,15 +379,17 @@ const Profile = () => {
                 Personal Details
               </h2>
               <div className="w-full h-0.5 bg-gray-300 rounded mb-6"></div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-800">
+                {/* <div className="md:col-span-2"> */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-600 mb-1">
-                    First Name
+                    Full Name
                   </label>
                   <input
                     type="text"
-                    name="firstName"
-                    value={formData.firstName}
+                    name="fullName"
+                    value={formData.fullName}
                     onChange={handleInputChange}
                     className="w-full bg-gray-100 rounded-full px-4 py-2 text-base"
                   />
@@ -208,56 +397,71 @@ const Profile = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-600 mb-1">
-                    Last Name
+                    Email
                   </label>
                   <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
+                    type="email"
+                    name="email"
+                    value={user.email}
                     onChange={handleInputChange}
-                    className="w-full bg-gray-100 rounded-full px-4 py-2 text-base"
+                    className="w-full bg-gray-100 rounded-full px-4 py-2 text-base cursor-not-allowed"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-600 mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleInputChange}
-                    className="w-full bg-gray-100 rounded-full px-4 py-2 text-base"
-                  />
-                </div>
+                <div className="md:col-span-2 grid grid-cols-12 gap-6">
+                  <div className="col-span-6">
+                    <label className="block text-sm font-semibold text-gray-600 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      className="w-full bg-gray-100 rounded-full px-4 py-2 text-base"
+                    />
+                  </div>
 
-                <div className="relative w-60">
-                  <label className="block text-sm font-semibold text-gray-600 mb-1">
-                    Gender
-                  </label>
-                  <select
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    className="bg-white border border-gray-300 text-gray-700 rounded-full px-4 py-2 text-base shadow-sm appearance-none w-full"
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
+                  <div className="col-span-3">
+                    <label className="block text-sm font-semibold text-gray-600 mb-1">
+                      Birth Date
+                    </label>
+                    <input
+                      type="date"
+                      name="birthDate"
+                      value={formData.birthDate}
+                      onChange={handleInputChange}
+                      className="w-full bg-gray-100 rounded-full px-4 py-2 text-base"
+                    />
+                  </div>
 
-                  {/* Icon mũi tên chỉ xuống */}
-                  <div className="pointer-events-none absolute inset-y-13 right-0 flex items-center text-gray-500">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
+                  <div className="col-span-3 relative">
+                    <label className="block text-sm font-semibold text-gray-600 mb-1">
+                      Gender
+                    </label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      className="w-full bg-white border border-gray-300 text-gray-700 rounded-full px-4 py-2 text-base shadow-sm appearance-none"
                     >
-                      <path d="M7 7l3 3 3-3H7z" />
-                    </svg>
+                      <option value="male">Nam</option>
+                      <option value="female">Nữ</option>
+                      <option value="other">Khác</option>
+                    </select>
+
+                    {/* Icon mũi tên chỉ xuống */}
+                    <div className="pointer-events-none absolute inset-y-13 right-4 flex items-center text-gray-500">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M7 7l3 3 3-3H7z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
@@ -274,6 +478,7 @@ const Profile = () => {
                   />
                 </div>
               </div>
+
               <div className="mt-6 flex justify-end">
                 <button
                   type="submit"
@@ -288,54 +493,138 @@ const Profile = () => {
               className="w-full md:w-2/3 bg-white rounded-lg shadow-lg p-10 m-4 mt-28 overflow-auto"
               style={{
                 boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
-                maxHeight: "24rem",
-                // marginTop: "7rem",
+                maxHeight: "36rem",
               }}
-              onSubmit={(e) => {
-                e.preventDefault();
-              }}
+              onSubmit={handleChangePassword}
             >
               <h2 className="mt-0 text-3xl font-semibold mb-3 w-full">
-                Email and Password
+                Change Password
               </h2>
               <div className="w-full h-0.5 bg-gray-300 rounded mb-6"></div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-800">
-                {/* Email */}
-                <div className="w-full md:col-span-2 flex flex-col items-start">
+              {passwordErrors.general && (
+                <div
+                  className={`mb-4 p-3 rounded-md ${
+                    passwordErrors.general.includes("thành công")
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {passwordErrors.general}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-6 text-gray-800">
+                {/* Current password */}
+                <div className="flex flex-col relative">
                   <label className="block text-sm font-semibold text-gray-600 mb-1">
-                    Email
+                    Current password
                   </label>
                   <input
-                    type="email"
-                    name="email"
-                    value={user.email}
-                    readOnly
-                    className="w-full max-w-xs bg-gray-100 rounded-full px-4 py-2 text-base cursor-not-allowed"
+                    type={showCurrentPassword ? "text" : "password"}
+                    name="currentPassword"
+                    value={formData.currentPassword}
+                    placeholder="Enter current password"
+                    onChange={handleInputChange}
+                    className={`w-80 bg-gray-100 rounded-full px-4 py-2 text-base pr-10 placeholder-gray-400${
+                      passwordErrors.currentPassword
+                        ? "border-2 border-red-500"
+                        : ""
+                    }`}
                   />
+                  <div
+                    className="absolute right-113 top-9 cursor-pointer"
+                    onClick={() => setShowCurrentPassword((prev) => !prev)}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeSlashIcon className="h-5 w-5 text-gray-600" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5 text-gray-600" />
+                    )}
+                  </div>
+                  {passwordErrors.currentPassword && (
+                    <span className="text-red-500 text-sm mt-1">
+                      {passwordErrors.currentPassword}
+                    </span>
+                  )}
                 </div>
 
-                {/* Password */}
-                <div className="w-full md:col-span-2 flex flex-col items-start">
+                {/* New password */}
+                <div className="flex flex-col relative">
                   <label className="block text-sm font-semibold text-gray-600 mb-1">
-                    Password
+                    New password
                   </label>
                   <input
-                    type="password"
-                    name="password"
-                    value="******"
-                    readOnly
-                    className="w-full max-w-xs bg-gray-100 rounded-full px-4 py-2 text-base cursor-not-allowed"
+                    type={showNewPassword ? "text" : "password"}
+                    name="newPassword"
+                    value={formData.newPassword}
+                    placeholder="Enter new password"
+                    onChange={handleInputChange}
+                    className={`w-80 bg-gray-100 rounded-full px-4 py-2 text-base pr-10 placeholder-gray-400 ${
+                      passwordErrors.newPassword
+                        ? "border-2 border-red-500"
+                        : ""
+                    }`}
                   />
+                  <div
+                    className="absolute right-113 top-9 cursor-pointer"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                  >
+                    {showNewPassword ? (
+                      <EyeSlashIcon className="h-5 w-5 text-gray-600" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5 text-gray-600" />
+                    )}
+                  </div>
+                  {passwordErrors.newPassword && (
+                    <span className="text-red-500 text-sm mt-1">
+                      {passwordErrors.newPassword}
+                    </span>
+                  )}
+                </div>
+
+                {/* Confirm new password */}
+                <div className="flex flex-col relative">
+                  <label className="block text-sm font-semibold text-gray-600 mb-1">
+                    Confirm new password
+                  </label>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="Confirm new password"
+                    className={`w-80 bg-gray-100 rounded-full px-4 py-2 text-base pr-10 placeholder-gray-400${
+                      passwordErrors.confirmPassword
+                        ? "border-2 border-red-500"
+                        : ""
+                    }`}
+                  />
+                  <div
+                    className="absolute right-113 top-9 cursor-pointer"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeSlashIcon className="h-5 w-5 text-gray-600" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5 text-gray-600" />
+                    )}
+                  </div>
+                  {passwordErrors.confirmPassword && (
+                    <span className="text-red-500 text-sm mt-1">
+                      {passwordErrors.confirmPassword}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="mt-6 flex justify-end">
                 <button
-                  type="button"
+                  type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={isLoading}
                 >
-                  Edit
+                  {isLoading ? "Processing..." : "Change Password"}
                 </button>
               </div>
             </form>

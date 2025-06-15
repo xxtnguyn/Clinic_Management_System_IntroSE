@@ -8,14 +8,16 @@ import { Fragment } from "react";
 interface Props {
   currentUser: {
     email: string;
-    full_name: string;
+    fullName: string;
     id: number;
     is_active: boolean;
     last_login: string;
     permissions: Array<string>;
     phone: string;
-    role_id: number;
-    role_name: string;
+    role: {
+      id: number;
+      name: string;
+    };
     username: string;
   };
 }
@@ -29,7 +31,7 @@ export default function HeaderDashboard({ currentUser }: Props) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isDashboard = location.pathname === "/dashboard";
-  const role = currentUser.role_name;
+  const role = currentUser.role?.name;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -95,24 +97,26 @@ export default function HeaderDashboard({ currentUser }: Props) {
           <img src={logo} alt="NDCC Logo" className="h-12 w-auto" />
         </Link>
         <div className="flex items-center space-x-6">
-          {role_navigations[role as keyof typeof role_navigations].map(
-            (navigation: string, index: number) => (
-              <Link
-                to={pages[navigation as keyof typeof pages]}
-                className={`text-black text-lg hover:text-[#1250B1] transition-colors relative ${
-                  location.pathname === pages[navigation as keyof typeof pages]
-                    ? "font-bold text-[#1250B1] border-b-2 border-[#1250B1] pb-1"
-                    : "font-normal"
-                }`}
-                key={index}
-                state={{
-                  user: currentUser,
-                }}
-              >
-                {navigation}
-              </Link>
-            )
-          )}
+          {role &&
+            role_navigations[role as keyof typeof role_navigations]?.map(
+              (navigation: string, index: number) => (
+                <Link
+                  to={pages[navigation as keyof typeof pages]}
+                  className={`text-black text-lg hover:text-[#1250B1] transition-colors relative ${
+                    location.pathname ===
+                    pages[navigation as keyof typeof pages]
+                      ? "font-bold text-[#1250B1] border-b-2 border-[#1250B1] pb-1"
+                      : "font-normal"
+                  }`}
+                  key={index}
+                  state={{
+                    user: currentUser,
+                  }}
+                >
+                  {navigation}
+                </Link>
+              )
+            )}
 
           <div className="relative" ref={dropdownRef}>
             <button
@@ -120,11 +124,11 @@ export default function HeaderDashboard({ currentUser }: Props) {
               className="flex items-center gap-2 text-lg text-black font-normal hover:text-[#1250B1] transition-colors focus:outline-none"
             >
               <img
-                src="https://cdn-icons-png.flaticon.com/512/847/847969.png"
+                src={`http://localhost:3000/uploads/avatars/${currentUser.role.name.toLowerCase()}-avatar.png`}
                 alt="Avatar"
                 className="w-6 h-6 rounded-full"
               />
-              <span>{currentUser.full_name}</span>
+              <span>{currentUser.fullName}</span>
               <svg
                 className={`w-5 h-5 transition-transform ${
                   isDropdownOpen ? "transform rotate-180" : ""
@@ -146,7 +150,7 @@ export default function HeaderDashboard({ currentUser }: Props) {
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                 <div className="px-4 py-2 border-b">
                   <p className="text-sm font-medium text-gray-900">
-                    {currentUser.full_name}
+                    {currentUser.fullName}
                   </p>
                   <p className="text-sm text-gray-500">{currentUser.email}</p>
                 </div>

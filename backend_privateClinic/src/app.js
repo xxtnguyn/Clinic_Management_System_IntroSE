@@ -25,11 +25,23 @@ dotenv.config();
 const app = express();
 
 // Middlewares
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(
+  express.static('public', {
+    setHeaders: (res, path, stat) => {
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  })
+);
+
 
 // Routes
 app.use('/api/auth', authRoutes);
