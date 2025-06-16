@@ -19,6 +19,7 @@ interface Props {
       name: string;
     };
     username: string;
+    avatar: string;
   };
 }
 
