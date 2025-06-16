@@ -27,6 +27,20 @@ class StaffService {
   ): Promise<AxiosResponse<ApiResponse<Staff>>> {
     return axiosInstance.put(`/staff/${staffId}`, data);
   }
+
+  uploadAvatar(
+    staffId: number,
+    file: File
+  ): Promise<AxiosResponse<ApiResponse<{ avatar: string; avatarUrl: string }>>> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    return axiosInstance.post(`/staff/${staffId}/upload-avatar`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
 }
 
 export default new StaffService();

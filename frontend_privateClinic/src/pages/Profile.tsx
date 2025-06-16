@@ -123,38 +123,71 @@ const Profile = () => {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      console.log("User object:", user);
-      if (user.avatar) {
-        const avatarUrl = `${import.meta.env.VITE_BACKEND_URL}${user.avatar}`;
-        console.log("Avatar URL:", avatarUrl); // ➜ kiểm tra URL có đúng không
-        // console.log("Avatar:", user.avatar);
-        setProfileImage(user.avatar);
+    // First try to get user from localStorage
+    const storedUser = localStorage.getItem('user');
+    const initialUser = storedUser ? JSON.parse(storedUser) : (user || null);
+    
+    if (initialUser) {
+      console.log("Initial user data:", initialUser);
+      
+      // Handle avatar - check if it's already a full URL or needs the backend URL prefix
+      if (initialUser.avatar) {
+        const avatarUrl = initialUser.avatar.startsWith('http') 
+          ? initialUser.avatar 
+          : `${import.meta.env.VITE_BACKEND_URL}${initialUser.avatar}`;
+        setProfileImage(avatarUrl);
       } else {
         setProfileImage(defaultAvatar);
       }
 
+      // Initialize form data
       setFormData({
-        fullName: user.fullName || "",
-        phoneNumber: user.phone || "",
-        address: user.address || "",
-        gender: mapGenderToEnglish(user.gender),
-        birthDate: formatDate(user.birthDate),
+        fullName: initialUser.fullName || "",
+        phoneNumber: initialUser.phone || "",
+        address: initialUser.address || "",
+        gender: mapGenderToEnglish(initialUser.gender || ""),
+        birthDate: formatDate(initialUser.birthDate || ""),
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
-    }
-  }, [user]);
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      // Update current user state
+      setCurrentUser(initialUser);
+    }
+  }, [user]); // Re-run if user prop changes
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file || !currentUser) return;
+
+    try {
+      setIsLoading(true);
+      const response = await staffService.uploadAvatar(currentUser.id, file);
+      
+      // Update the profile image in the UI
+      setProfileImage(response.data.data.avatarUrl);
+      
+      // Update the user data in localStorage
+      const updatedUser = { ...currentUser, avatar: response.data.data.avatar };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      
+      setMessage({
+        type: 'success',
+        text: 'Cập nhật ảnh đại diện thành công'
+      });
+    } catch (error) {
+      const errorObj = error as { response?: { data?: { message?: string } } };
+      const errorMessage = errorObj?.response?.data?.message || 'Có lỗi xảy ra khi tải lên ảnh đại diện';
+      
+      setMessage({
+        type: 'error',
+        text: errorMessage
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -312,15 +345,25 @@ const Profile = () => {
               marginTop: "7rem",
             }}
           >
-            <div
-              className="w-48 h-48 rounded-full p-1 bg-gradient-to-tr from-green-200 via-blue-300 to-indigo-500 shadow-xl"
-              style={{ marginTop: "-8rem" }}
-            >
-              <img
-                src={profileImage}
-                alt="Profile"
-                className="w-full h-full rounded-full object-cover"
-              />
+            <div className="relative group" style={{ marginTop: "-8rem" }}>
+              <div className="w-48 h-48 rounded-full p-1 bg-gradient-to-tr from-green-200 via-blue-300 to-indigo-500 shadow-xl">
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  className="w-full h-full rounded-full object-cover"
+                />
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <label className="cursor-pointer bg-black bg-opacity-50 text-white px-4 py-2 rounded">
+                  Đổi ảnh
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="mt-6 text-center w-full">

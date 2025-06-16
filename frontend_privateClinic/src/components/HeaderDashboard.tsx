@@ -124,9 +124,20 @@ export default function HeaderDashboard({ currentUser }: Props) {
               className="flex items-center gap-2 text-lg text-black font-normal hover:text-[#1250B1] transition-colors focus:outline-none"
             >
               <img
-                src={`http://localhost:3000/uploads/avatars/${currentUser.role.name.toLowerCase()}-avatar.png`}
+                src={
+                  currentUser.avatar 
+                    ? currentUser.avatar.startsWith('http')
+                      ? currentUser.avatar
+                      : `http://localhost:3000${currentUser.avatar}`
+                    : `http://localhost:3000/uploads/avatars/${currentUser.role.name.toLowerCase()}-avatar.png`
+                }
                 alt="Avatar"
-                className="w-6 h-6 rounded-full"
+                className="w-6 h-6 rounded-full object-cover"
+                onError={(e) => {
+                  // Fallback to default avatar if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.src = `http://localhost:3000/uploads/avatars/${currentUser.role.name.toLowerCase()}-avatar.png`;
+                }}
               />
               <span>{currentUser.fullName}</span>
               <svg
