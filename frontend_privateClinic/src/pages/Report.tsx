@@ -141,9 +141,13 @@ const Report = () => {
         }
 
         for (let i = 0; i < revenues.length; i++) {
-          revenues[i].profit_margin =
-            String((Number(revenues[i].total_revenue) / sum_revenue) * 100) +
-            "%";
+          if (sum_revenue == 0) {
+            revenues[i].profit_margin = "None";
+          } else {
+            revenues[i].profit_margin =
+              String((Number(revenues[i].total_revenue) / sum_revenue) * 100) +
+              "%";
+          }
         }
 
         setRevenues(revenues as Item[]);
