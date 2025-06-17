@@ -16,7 +16,7 @@ class AuthController {
     try {
       const { username, password } = req.body;
       const authResult = await Auth.login(username, password);
-      
+
       res.status(200).json({
         success: true,
         message: 'Đăng nhập thành công',
@@ -26,7 +26,7 @@ class AuthController {
       next(error);
     }
   }
-  
+
   /**
    * Lấy thông tin người dùng hiện tại
    * @route GET /api/auth/me
@@ -34,7 +34,7 @@ class AuthController {
   static async getCurrentUser(req, res, next) {
     try {
       const user = await Auth.getCurrentUser(req.user.id);
-      
+
       res.status(200).json({
         success: true,
         data: user
@@ -43,7 +43,7 @@ class AuthController {
       next(error);
     }
   }
-  
+
   /**
    * Đổi mật khẩu người dùng
    * @route POST /api/auth/change-password
@@ -52,7 +52,7 @@ class AuthController {
     try {
       const { currentPassword, newPassword } = req.body;
       await Auth.changePassword(req.user.id, currentPassword, newPassword);
-      
+
       res.status(200).json({
         success: true,
         message: 'Đổi mật khẩu thành công'
@@ -73,12 +73,12 @@ class AuthController {
       if (error) {
         throw new ValidationError(error.details[0].message);
       }
-      
+
       const { email } = req.body;
-      
+
       // Gửi email đặt lại mật khẩu
       await Auth.requestPasswordReset(email);
-      
+
       // Luôn trả về thành công để tránh lộ thông tin
       res.status(200).json({
         success: true,
@@ -88,7 +88,7 @@ class AuthController {
       next(error);
     }
   }
-  
+
   /**
    * Đặt lại mật khẩu với token
    * @route POST /api/auth/reset-password
@@ -100,12 +100,12 @@ class AuthController {
       if (error) {
         throw new ValidationError(error.details[0].message);
       }
-      
+
       const { token, password } = req.body;
-      
+
       // Thực hiện đặt lại mật khẩu
       await Auth.resetPassword(token, password);
-      
+
       res.status(200).json({
         success: true,
         message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.'
@@ -131,7 +131,7 @@ class AuthController {
 
       // Gọi model để xử lý yêu cầu đặt lại mật khẩu
       await Auth.requestPasswordReset(email);
-      
+
       // Luôn trả về thành công để tránh lộ thông tin email có tồn tại hay không
       res.status(200).json({
         success: true,

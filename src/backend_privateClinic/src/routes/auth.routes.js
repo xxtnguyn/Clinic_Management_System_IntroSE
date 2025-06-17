@@ -2,11 +2,11 @@ const express = require('express');
 const AuthController = require('../controllers/auth.controller');
 const { authenticate } = require('../middlewares/auth');
 const { authSchema } = require('../schemas');
-const { 
-  loginSchema, 
-  changePasswordSchema, 
-  forgotPasswordSchema, 
-  resetPasswordSchema 
+const {
+  loginSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema
 } = authSchema;
 const validate = require('../middlewares/validation.middleware');
 
@@ -47,15 +47,6 @@ router.post(
   '/forgot-password',
   validate(forgotPasswordSchema),
   AuthController.forgotPassword
-);
-
-// Route: POST /api/auth/reset-password
-// Mô tả: Đặt lại mật khẩu với token
-// Quyền: Không yêu cầu xác thực
-router.post(
-  '/reset-password',
-  validate(resetPasswordSchema),
-  AuthController.resetPassword
 );
 
 // Route: POST /api/auth/reset-password

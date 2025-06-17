@@ -22,6 +22,15 @@ export interface UserProfile {
   role: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  password: string;
+}
+
 class AuthService {
   async login(payload: LoginPayload): Promise<LoginResponse> {
     try {
@@ -52,6 +61,22 @@ class AuthService {
       currentPassword,
       newPassword,
     });
+  }
+
+  async forgotPassword(payload: ForgotPasswordPayload): Promise<void> {
+    try {
+      await axiosInstance.post("/auth/forgot-password", payload);
+    } catch (error: any) {
+      throw { message: error.response?.data?.message };
+    }
+  }
+
+  async resetPassword(payload: ResetPasswordPayload): Promise<void> {
+    try {
+      await axiosInstance.post("/auth/reset-password", payload);
+    } catch (error: any) {
+      throw { message: error.response?.data?.message };
+    }
   }
 }
 
