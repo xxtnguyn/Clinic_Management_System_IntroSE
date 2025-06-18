@@ -462,12 +462,21 @@ export default function Regulations() {
                           </label>
                           <input
                             type="text"
-                            value={choosedMedicine ? `${formatNumberWithThousandSeparator(Number(choosedMedicine.price))} VND` : ""}
+                            value={
+                              choosedMedicine
+                                ? `${formatNumberWithThousandSeparator(
+                                    Number(choosedMedicine.price)
+                                  )} VND`
+                                : ""
+                            }
                             placeholder={"Type here..."}
                             className="w-2/3 border border-blue-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
                             onChange={(e) => {
                               // Remove VND and commas, then convert to number
-                              const numericValue = e.target.value.replace(/[^\d]/g, "");
+                              const numericValue = e.target.value.replace(
+                                /[^\d]/g,
+                                ""
+                              );
                               handleChangeAttr(
                                 "price",
                                 !isNaN(Number(numericValue))
