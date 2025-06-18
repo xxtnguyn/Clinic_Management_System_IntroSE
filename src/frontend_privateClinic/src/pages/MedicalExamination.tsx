@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import HeaderDashboard from "../components/HeaderDashboard";
-import { getPatientExaminationByName, getMedicines } from "../api/medical_examination.service.ts";
+import {
+  getPatientExaminationByName,
+  getMedicines,
+} from "../api/medical_examination.service.ts";
 import type { PatientExaminationHistory } from "../api/patient.service";
+import AppointmentSelectionModal from "../components/AppointmentSelectionModal";
+import {
+  appointmentService,
+  type Appointment,
+} from "../api/appointment.service";
+import { formatDateTimeForDisplay } from "../utils/dateUtils";
+import { formatNumberWithThousandSeparator } from "../utils/currencyUtils.ts"
 
 interface Medicine {
   id: number;
@@ -35,57 +45,19 @@ const MedicalExamination: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Separate search states
-  const [searchTop, setSearchTop] = useState("");
+  // Appointment modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointmentLoading, setAppointmentLoading] = useState(false);
+  const [appointmentError, setAppointmentError] = useState("");
+
+  // Medicine states
   const [search, setSearch] = useState("");
   const [selectedMedicines, setSelectedMedicines] = useState<string[]>([]);
   const [prescription, setPrescription] = useState<PrescriptionItem[]>([]);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [medicineLoading, setMedicineLoading] = useState(true);
   const [medicineError, setMedicineError] = useState<string | null>(null);
-
-  // Fetch patient data when searchTop changes
-  const handleSearchPatient = async () => {
-    if (!searchTop.trim()) {
-      setError("Vui lòng nhập tên bệnh nhân để tìm kiếm");
-      setPatient({
-        id: 0,
-        "Họ Tên": "",
-        "Ngày Khám": "",
-        "Loại Bệnh": "",
-        "Triệu Chứng": "",
-      });
-      return;
-    }
-    try {
-      setLoading(true);
-      setError(null);
-      const patientData = await getPatientExaminationByName(searchTop);
-      if (patientData.length > 0) {
-        setPatient(patientData[0]);
-      } else {
-        setError("Không tìm thấy bệnh nhân với tên này");
-        setPatient({
-          id: 0,
-          "Họ Tên": "",
-          "Ngày Khám": "",
-          "Loại Bệnh": "",
-          "Triệu Chứng": "",
-        });
-      }
-    } catch (err: any) {
-      setError(err.message || "Không thể lấy dữ liệu bệnh nhân");
-      setPatient({
-        id: 0,
-        "Họ Tên": "",
-        "Ngày Khám": "",
-        "Loại Bệnh": "",
-        "Triệu Chứng": "",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Fetch medicines on component mount
   useEffect(() => {
@@ -102,11 +74,45 @@ const MedicalExamination: React.FC = () => {
     fetchMedicines();
   }, []);
 
+  // Fetch appointments when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      const fetchAppointments = async () => {
+        try {
+          setAppointmentLoading(true);
+          setAppointmentError("");
+          const appointments = await appointmentService.getAppointments();
+          setAppointments(appointments);
+        } catch (err: any) {
+          setAppointmentError(err.message || "Failed to fetch appointments");
+        } finally {
+          setAppointmentLoading(false);
+        }
+      };
+      fetchAppointments();
+    }
+  }, [isModalOpen]);
+
+  // Handle appointment selection
+  const handleAppointmentSelect = (appointment: Appointment) => {
+    setPatient({
+      id: appointment.id,
+      "Họ Tên": appointment.patient_name,
+      "Ngày Khám": formatDateTimeForDisplay(appointment.appointment_date),
+      "Loại Bệnh": "",
+      "Triệu Chứng": "",
+    });
+  };
+
   // Show full list of drugs
-  const displayedMedicines = search.trim() === "" ? medicines : medicines.filter((m) =>
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.id.toString().toLowerCase().includes(search.toLowerCase())
-  );
+  const displayedMedicines =
+    search.trim() === ""
+      ? medicines
+      : medicines.filter(
+          (m) =>
+            m.name.toLowerCase().includes(search.toLowerCase()) ||
+            m.id.toString().toLowerCase().includes(search.toLowerCase())
+        );
 
   // Add selected medicines to prescription
   const handleAddIn = () => {
@@ -124,16 +130,13 @@ const MedicalExamination: React.FC = () => {
   // Update prescription quantity/usage
   const updatePrescription = (idx: number, field: string, value: any) => {
     setPrescription((prev) =>
-      prev.map((item, i) =>
-        i === idx ? { ...item, [field]: value } : item
-      )
+      prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
     );
   };
 
   // Remove duplicates in prescription
   const uniquePrescription = prescription.filter(
-    (item, idx, arr) =>
-      arr.findIndex((x) => x.id === item.id) === idx
+    (item, idx, arr) => arr.findIndex((x) => x.id === item.id) === idx
   );
 
   // Medicine cost calculation
@@ -147,30 +150,31 @@ const MedicalExamination: React.FC = () => {
     <div className="min-h-screen bg-gray-50 w-full">
       <HeaderDashboard currentUser={user} />
       <main className="container mx-auto px-8 py-6 mt-16">
-        {/* Top Search Bar */}
+        {/* Select Appointment Button */}
         <div className="flex items-center gap-2 mt-4 mb-2">
-          <input
-            type="text"
-            placeholder="Search..."
-            className="border border-blue-500 rounded px-4 py-2 w-64 text-blue-500 focus:outline-none"
-            value={searchTop}
-            onChange={(e) => setSearchTop(e.target.value)}
-          />
-          <span className="italic text-blue-400 ml-2">Based on</span>
-          <button className="bg-blue-100 text-blue-500 rounded px-4 py-2 font-semibold ml-2" disabled>
-            Full Name
-          </button>
           <button
-            className="bg-blue-500 text-white rounded px-6 py-2 ml-2"
-            onClick={handleSearchPatient}
+            className="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition-colors"
+            onClick={() => setIsModalOpen(true)}
           >
-            Search
+            Select Patient
           </button>
         </div>
+
+        {/* Appointment Selection Modal */}
+        <AppointmentSelectionModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSelectAppointment={handleAppointmentSelect}
+          appointments={appointments}
+          isLoading={appointmentLoading}
+          error={appointmentError}
+        />
+
         {/* Header */}
         <div className="bg-blue-500 text-white rounded-t-lg px-6 py-3 text-lg font-semibold text-center">
           Medical Examination Form
         </div>
+
         {/* Patient Info Table */}
         {loading ? (
           <div className="text-center py-10">Loading...</div>
@@ -180,24 +184,59 @@ const MedicalExamination: React.FC = () => {
           <table className="w-full border border-blue-500">
             <tbody>
               <tr className="border-b border-blue-500">
-                <td className="font-bold px-4 py-2 w-1/4 text-gray-900">Full Name:</td>
-                <td className="px-4 py-2 w-1/4 text-gray-900 border-r border-r-blue-500">{patient["Họ Tên"]}</td>
-                <td className="font-bold px-4 py-2 w-1/4 text-gray-900">Visit Date:</td>
-                <td className="px-4 py-2 w-1/4 text-gray-900">{patient["Ngày Khám"]}</td>
+                <td className="font-bold px-4 py-2 w-1/4 text-gray-900">
+                  Full Name:
+                </td>
+                <td className="px-4 py-2 w-1/4 text-gray-900 border-r border-r-blue-500">
+                  {patient["Họ Tên"]}
+                </td>
+                <td className="font-bold px-4 py-2 w-1/4 text-gray-900">
+                  Visit Date:
+                </td>
+                <td className="px-4 py-2 w-1/4 text-gray-900">
+                  {patient["Ngày Khám"]}
+                </td>
               </tr>
               <tr className="border-blue-500">
                 <td className="font-bold px-4 py-2 text-gray-900">Symptoms:</td>
-                <td className="px-4 py-2 text-gray-900 border-r border-r-blue-500">{patient["Triệu Chứng"]}</td>
-                <td className="font-bold px-4 py-2 text-gray-900">Diagnosed Illness:</td>
-                <td className="px-4 py-2 text-gray-900">{patient["Loại Bệnh"]}</td>
+                <td className="px-4 py-2 text-gray-900 border-r border-r-blue-500">
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-300 placeholder-gray-400"
+                    placeholder="Enter patient's symptoms..."
+                    value={patient["Triệu Chứng"]}
+                    onChange={(e) =>
+                      setPatient({ ...patient, "Triệu Chứng": e.target.value })
+                    }
+                  />
+                </td>
+                <td className="font-bold px-4 py-2 text-gray-900">
+                  Diagnosed Illness:
+                </td>
+                <td className="px-4 py-2 text-gray-900">
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring focus:ring-blue-300 placeholder-gray-400"
+                    placeholder="Enter patient's diagnosed illness..."
+                    value={patient["Loại Bệnh"]}
+                    onChange={(e) =>
+                      setPatient({ ...patient, "Loại Bệnh": e.target.value })
+                    }
+                  />
+                </td>
               </tr>
             </tbody>
           </table>
         )}
+
         {/* Consultation Fee */}
         <div className="mt-4 mb-2 font-bold text-black">
-          Consultation Fee: <span className="font-normal">{consultationFee.toLocaleString()} VND</span>
+          Consultation Fee:{" "}
+          <span className="font-normal">
+            {consultationFee.toLocaleString()} VND
+          </span>
         </div>
+
         {/* Medicine Search Section */}
         <div className="flex items-center gap-2 mt-4 mb-2">
           <input
@@ -208,47 +247,85 @@ const MedicalExamination: React.FC = () => {
             onChange={(e) => setSearch(e.target.value)}
           />
           <span className="italic text-blue-400 ml-2">Based on</span>
-          <button className="bg-blue-100 text-blue-500 rounded px-4 py-2 font-semibold ml-2" disabled>
+          <button
+            className="bg-blue-100 text-blue-500 rounded px-4 py-2 font-semibold ml-2"
+            disabled
+          >
             Medicine
           </button>
-          <button className="bg-blue-500 text-white rounded px-6 py-2 ml-2">Search</button>
+          <button className="bg-blue-500 text-white rounded px-6 py-2 ml-2">
+            Search
+          </button>
         </div>
+
         {/* Medicine Table */}
         <div className="max-h-48 overflow-y-auto border border-blue-500">
           <table className="w-full medicine-table">
             <thead className="bg-blue-500 text-white">
               <tr>
-                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">Code</th>
-                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">Medicine</th>
-                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">Unit</th>
-                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">Price (VND)</th>
-                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">Stock</th>
-                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">Description</th>
-                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">Select</th>
+                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">
+                  Code
+                </th>
+                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">
+                  Medicine
+                </th>
+                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">
+                  Unit
+                </th>
+                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">
+                  Price (VND)
+                </th>
+                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">
+                  Stock
+                </th>
+                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">
+                  Description
+                </th>
+                <th className="px-4 py-2 sticky top-0 z-10 bg-blue-500">
+                  Select
+                </th>
               </tr>
             </thead>
             <tbody className="medicine-table-body">
               {medicineLoading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 text-gray-400">Loading...</td>
+                  <td colSpan={7} className="text-center py-4 text-gray-400">
+                    Loading...
+                  </td>
                 </tr>
               ) : medicineError ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 text-red-500">{medicineError}</td>
+                  <td colSpan={7} className="text-center py-4 text-red-500">
+                    {medicineError}
+                  </td>
                 </tr>
               ) : displayedMedicines.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 text-gray-400">No medicines found</td>
+                  <td colSpan={7} className="text-center py-4 text-gray-400">
+                    No medicines found
+                  </td>
                 </tr>
               ) : (
                 displayedMedicines.map((m) => (
                   <tr key={m.id} className="border-b border-blue-500">
-                    <td className="px-4 py-2 text-center text-gray-900">{m.id}</td>
-                    <td className="px-4 py-2 text-center text-gray-900">{m.name}</td>
-                    <td className="px-4 py-2 text-center text-gray-900">{m.unit}</td>
-                    <td className="px-4 py-2 text-center text-gray-900">{m.price.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-center text-gray-900">{m.quantity_in_stock}</td>
-                    <td className="px-4 py-2 text-center text-gray-900">{m.description}</td>
+                    <td className="px-4 py-2 text-center text-gray-900">
+                      {m.id}
+                    </td>
+                    <td className="px-4 py-2 text-center text-gray-900">
+                      {m.name}
+                    </td>
+                    <td className="px-4 py-2 text-center text-gray-900">
+                      {m.unit}
+                    </td>
+                    <td className="px-4 py-2 text-center text-gray-900">
+                      {formatNumberWithThousandSeparator(m.price.toLocaleString())}
+                    </td>
+                    <td className="px-4 py-2 text-center text-gray-900">
+                      {m.quantity_in_stock}
+                    </td>
+                    <td className="px-4 py-2 text-center text-gray-900">
+                      {m.description}
+                    </td>
                     <td className="px-4 py-2 text-center text-gray-900 relative">
                       <div className="relative flex items-center justify-center">
                         <input
@@ -257,15 +334,27 @@ const MedicalExamination: React.FC = () => {
                           checked={selectedMedicines.includes(m.id.toString())}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedMedicines([...selectedMedicines, m.id.toString()]);
+                              setSelectedMedicines([
+                                ...selectedMedicines,
+                                m.id.toString(),
+                              ]);
                             } else {
-                              setSelectedMedicines(selectedMedicines.filter((c) => c !== m.id.toString()));
+                              setSelectedMedicines(
+                                selectedMedicines.filter(
+                                  (c) => c !== m.id.toString()
+                                )
+                              );
                             }
                           }}
                         />
                         <svg
                           className="hidden peer-checked:block absolute pointer-events-none w-3 h-3 text-white"
-                          style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20 }}
+                          style={{
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            zIndex: 20,
+                          }}
                           viewBox="0 0 16 16"
                           fill="none"
                           xmlns="http://www.w3.org/2000/svg"
@@ -311,15 +400,25 @@ const MedicalExamination: React.FC = () => {
           <tbody>
             {uniquePrescription.map((item, idx) => (
               <tr key={item.id} className="border-b border-blue-500">
-                <td className="px-4 py-2 text-center text-gray-900">{idx + 1}</td>
-                <td className="px-4 py-2 text-center text-gray-900">{item.name}</td>
-                <td className="px-4 py-2 text-center text-gray-900">{item.unit}</td>
+                <td className="px-4 py-2 text-center text-gray-900">
+                  {idx + 1}
+                </td>
+                <td className="px-4 py-2 text-center text-gray-900">
+                  {item.name}
+                </td>
+                <td className="px-4 py-2 text-center text-gray-900">
+                  {item.unit}
+                </td>
                 <td className="px-4 py-2 text-center text-gray-900">
                   <div className="flex items-center justify-center gap-2">
                     <button
                       className="bg-blue-100 text-blue-500 rounded px-2 py-1 font-bold"
                       onClick={() =>
-                        updatePrescription(idx, "quantity", Math.max(1, (item.quantity || 1) - 1))
+                        updatePrescription(
+                          idx,
+                          "quantity",
+                          Math.max(1, (item.quantity || 1) - 1)
+                        )
                       }
                       type="button"
                     >
@@ -329,7 +428,11 @@ const MedicalExamination: React.FC = () => {
                     <button
                       className="bg-blue-100 text-blue-500 rounded px-2 py-1 font-bold"
                       onClick={() =>
-                        updatePrescription(idx, "quantity", (item.quantity || 1) + 1)
+                        updatePrescription(
+                          idx,
+                          "quantity",
+                          (item.quantity || 1) + 1
+                        )
                       }
                       type="button"
                     >
@@ -343,14 +446,18 @@ const MedicalExamination: React.FC = () => {
                     className="border border-gray-300 rounded px-2 py-1 w-full"
                     placeholder="Type here..."
                     value={item.usage}
-                    onChange={(e) => updatePrescription(idx, "usage", e.target.value)}
+                    onChange={(e) =>
+                      updatePrescription(idx, "usage", e.target.value)
+                    }
                   />
                 </td>
               </tr>
             ))}
             {uniquePrescription.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-4 text-gray-400">No medicines added</td>
+                <td colSpan={5} className="text-center py-4 text-gray-400">
+                  No medicines added
+                </td>
               </tr>
             )}
           </tbody>
@@ -358,7 +465,10 @@ const MedicalExamination: React.FC = () => {
         {/* Medicine Cost & Total Cost */}
         <div className="flex justify-between items-center mt-6">
           <div className="font-bold text-black">
-            Medicine cost: <span className="font-normal">{medicineCost.toLocaleString()} VND</span>
+            Medicine cost:{" "}
+            <span className="font-normal">
+              {medicineCost.toLocaleString()} VND
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <div className="border-2 border-blue-300 rounded-lg px-6 py-2 font-bold text-blue-500 bg-white">
