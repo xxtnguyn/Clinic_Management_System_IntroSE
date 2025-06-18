@@ -12,6 +12,7 @@ import Regulations from "./pages/Regulations";
 import Report from "./pages/Report";
 import AboutUs from "./pages/AboutUs";
 import Profile from "./pages/Profile";
+import ResetPassword from "./pages/ResetPassword";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -26,6 +27,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Home />} />
             <Route path="/" element={<Home />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/medical-examination-form"
               element={
