@@ -16,7 +16,7 @@ const DateSearchInput: React.FC<DateSearchInputProps> = ({
   className = "w-40",
 }) => {
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className} z-50`}>
       <label className="block text-sm text-[#1250B1] mb-1 font-medium">
         {label}
       </label>
@@ -26,6 +26,8 @@ const DateSearchInput: React.FC<DateSearchInputProps> = ({
         dateFormat="dd/MM/yyyy"
         className="w-full border border-gray-300 rounded-full px-4 py-2 pr-10 text-black shadow-sm bg-white placeholder-gray-400"
         placeholderText="dd/mm/yyyy"
+        popperClassName="z-50"
+        popperPlacement="bottom-start"
       />
 
       {/* Dropdown arrow icon */}
