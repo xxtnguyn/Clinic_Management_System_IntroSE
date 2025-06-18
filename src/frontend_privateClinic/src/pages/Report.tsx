@@ -7,6 +7,11 @@ import BlueUnderline from "../components/BlueUnderline";
 import Table from "../components/Table";
 import { medicineService } from "../api/medicine.service";
 import { invoiceService } from "../api/invoice.service";
+import MonthDatePicker from "../components/MonthDatePicker";
+import MonthPicker from "../components/MonthPicker";
+import { MedicineSearchInput } from "../components/SearchBar";
+import { formatDateForAPI, formatDateForDisplay } from "../utils/dateUtils.ts";
+import { formatNumberWithThousandSeparator } from "../utils/currencyUtils.ts";
 
 interface Item {
   medicine_id: number;
@@ -57,7 +62,7 @@ const Report = () => {
     new Date().toISOString().slice(0, 7)
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [basedOn, setBasedOn] = useState<ItemKey | "">("");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [presentList, setPresentList] = useState<Item[]>([]);
   const [filteredMedicines, setFilteredMedicines] = useState<Item[]>([]);
   const [revenues, setRevenues] = useState<Item[]>([]);
@@ -158,39 +163,61 @@ const Report = () => {
   }, [activeTab, selectedMonth]);
 
   useEffect(() => {
-    setBasedOn("");
+    setSearchTerm("");
+    setSelectedDate(null);
   }, [activeTab]);
 
   useEffect(() => {
     setSearchTerm("");
-  }, [activeTab]);
-
-  useEffect(() => {
-    setSearchTerm("");
+    setSelectedDate(null);
   }, [selectedMonth]);
+
+  // Auto search when date is selected in INCOME tab
+  useEffect(() => {
+    if (activeTab === "INCOME" && selectedDate) {
+      handleSearch(filteredRevenues);
+    } else if (activeTab === "INCOME" && !selectedDate) {
+      // Show all revenues for the selected month when no date is selected
+      setPresentList(revenues);
+    }
+  }, [selectedDate, activeTab, filteredRevenues, revenues]);
 
   const handleSearch = (filteredItems: Item[]) => {
     var filteredItems_: Item[] = filteredItems;
-    if (basedOn != "") {
+
+    if (activeTab === "INCOME" && selectedDate) {
+      // console.log("Selected date: ", selectedDate);
+
+      // Use formatDateForDisplay to get the date in dd/MM/yyyy format for comparison
+      const searchDateDisplay = formatDateForDisplay(
+        formatDateForAPI(selectedDate)
+      );
+      filteredItems_ = filteredItems.filter((item) => {
+        const itemDateDisplay = formatDateForDisplay(item.date);
+        // console.log("Displayed date: ", itemDateDisplay);
+        return itemDateDisplay === searchDateDisplay;
+      });
+    } else if (activeTab === "MEDICINE" && searchTerm !== "") {
+      // For medicine tab, search by medicine name
       filteredItems_ = filteredItems.filter((item) =>
-        String(item[basedOn])
+        String(item.name)
           .toLowerCase()
           .startsWith(String(searchTerm).toLowerCase())
       );
-    } else if (searchTerm == "") {
+    } else {
+      // Show all items if no search criteria
       if (activeTab == "MEDICINE") {
         setPresentList(medicineStatistic);
       } else {
         setPresentList(revenues);
       }
-    } else {
-      console.log("Please choose Based on");
+      return;
     }
     setPresentList(filteredItems_);
   };
 
   useEffect(() => {
-    if (activeTab == "MEDICINE") {
+    if (activeTab === "MEDICINE") {
       setFilteredMedicines(medicineStatistic);
     } else {
       setFilteredRevenues(revenues);
@@ -210,7 +237,7 @@ const Report = () => {
       <HeaderDashboard currentUser={user} />
 
       <main className="container mx-auto px-8 py-6 mt-16">
-        <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg overflow-hidden pb-50">
+        <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
           {/* Tab Headers */}
           <TabHeaders
             activeTab={activeTab}
@@ -225,98 +252,50 @@ const Report = () => {
           <div className="p-6 bg-gray-50 min-h-96">
             {/* Month Selector and Search */}
             <div className="mb-6 space-y-4">
-              {/* Month Selector */}
-              <div className="flex items-center gap-4">
-                <span className="text-blue-600 font-medium">Month</span>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              {/* Month Selector - Different for each tab */}
+              {activeTab === "INCOME" ? (
+                <MonthDatePicker
+                  selectedMonth={selectedMonth}
+                  selectedDate={selectedDate}
+                  onMonthChange={setSelectedMonth}
+                  onDateChange={setSelectedDate}
                 />
-              </div>
+              ) : (
+                <MonthPicker
+                  selectedMonth={selectedMonth}
+                  onMonthChange={setSelectedMonth}
+                />
+              )}
 
-              {/* Search Section */}
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-md">
-                  {basedOn != "date" && (
-                    <>
-                      <input
-                        id="myInput"
-                        type="text"
-                        placeholder="Search..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
+              {/* Search Section - Only for MEDICINE tab */}
+              {activeTab === "MEDICINE" && (
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1 max-w-md">
+                    <MedicineSearchInput
+                      value={searchTerm}
+                      onChange={setSearchTerm}
+                      placeholder="Search by medicine name..."
+                    />
+                  </div>
 
-                      <Search
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                        size={20}
-                      />
-                    </>
-                  )}
+                  <button
+                    onClick={() => handleSearch(filteredMedicines)}
+                    className="px-6 py-2 bg-[#1250B1] text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Search
+                  </button>
 
-                  {basedOn == "date" && (
-                    <select
-                      className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    >
-                      <option value="">--Choose the day--</option>
-                      {Array.from(
-                        { length: Number(end.slice(-2)) },
-                        (_, i) => i + 1
-                      ).map((num) => (
-                        <option
-                          key={num}
-                          value={
-                            selectedMonth + "-" + String(num).padStart(2, "0")
-                          }
-                        >
-                          Day {num}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  <button
+                    onClick={() => {
+                      setSearchTerm("");
+                      setPresentList(medicineStatistic);
+                    }}
+                    className="px-4 py-2 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-100 transition-colors font-medium"
+                  >
+                    Clear
+                  </button>
                 </div>
-
-                <span className="text-blue-600 font-light italic">
-                  Based on
-                </span>
-                <select
-                  value={basedOn}
-                  onChange={(e) => {
-                    setBasedOn(e.target.value as ItemKey);
-                  }}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48"
-                >
-                  <option value="">-- Choose --</option>
-                  {activeTab === "MEDICINE" && (
-                    <>
-                      <option value="id">Medicine ID</option>
-                      <option value="name">Medicine Name</option>
-                    </>
-                  )}
-
-                  {activeTab === "INCOME" && (
-                    <>
-                      <option value="date">Examination Date</option>
-                    </>
-                  )}
-                </select>
-                <button
-                  onClick={() => {
-                    if (activeTab === "MEDICINE") {
-                      handleSearch(filteredMedicines);
-                    } else {
-                      handleSearch(filteredRevenues);
-                    }
-                  }}
-                  className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors font-medium"
-                >
-                  Find
-                </button>
-              </div>
+              )}
             </div>
 
             {/* Table */}
@@ -337,6 +316,13 @@ const Report = () => {
                   "total_quantity",
                   "prescription_count",
                 ]}
+                weights={[
+                  "w-[100px]",
+                  "w-[200px]",
+                  "w-[300px]",
+                  "w-[200px]",
+                  "w-[200px]",
+                ]}
               />
             )}
 
@@ -348,13 +334,20 @@ const Report = () => {
                   "Revenue",
                   "Profit Margin",
                 ]}
-                filteredItems={presentList}
+                filteredItems={presentList.map((item) => ({
+                  ...item,
+                  date: formatDateForDisplay(item.date),
+                  total_revenue: `${formatNumberWithThousandSeparator(
+                    Number(item.total_revenue)
+                  )} VND`,
+                }))}
                 attributesOfItem={[
                   "date",
                   "patient_count",
                   "total_revenue",
                   "profit_margin",
                 ]}
+                weights={["w-[200px]", "w-[300px]", "w-[200px]", "w-[200px]"]}
               />
             )}
           </div>

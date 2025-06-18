@@ -114,6 +114,7 @@ const PatientRecord = () => {
                 }));
               }
             }}
+            label="Visit Date"
           />
 
           <PatientSearchInput
@@ -144,9 +145,9 @@ const PatientRecord = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow max-h-96 overflow-y-auto">
           <table className="w-full">
-            <thead className="bg-[#1250B1] text-white">
+            <thead className="bg-[#1250B1] text-white sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-3 text-left">No.</th>
                 <th className="px-6 py-3 text-left">Patient Name</th>

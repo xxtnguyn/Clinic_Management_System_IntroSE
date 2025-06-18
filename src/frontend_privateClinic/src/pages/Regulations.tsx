@@ -10,6 +10,8 @@ import type { CreateMedicineInput } from "../api/medicine.service";
 import axios from "axios";
 import { settingService } from "../api/setting.service";
 import type { Setting } from "../api/setting.service";
+import { formatNumberWithThousandSeparator } from "../utils/currencyUtils.ts";
+import { MedicineSearchInput } from "../components/SearchBar";
 
 interface Medicine {
   id: number;
@@ -28,6 +30,7 @@ export default function Regulations() {
   const [presentList, setPresentList] = useState<Medicine[]>([]);
   const [choosedMedicine, setChoosedMedicine] = useState<Medicine | null>();
   const [isAddingMedicine, setIsAddingMedicine] = useState(false);
+  const [isEditingMedicine, setIsEditingMedicine] = useState(false);
   const [fetch, setFetch] = useState(0);
   const [examinationFee, setExamonationFee] = useState(0);
   const [maxPatientsPerDay, setMaxPatientsPerDay] = useState(0);
@@ -40,24 +43,36 @@ export default function Regulations() {
 
   const filteredMedicines = medicines;
 
+  // Format data for table display with thousand separators for price
+  const formattedPresentList = presentList.map((medicine) => ({
+    ...medicine,
+    price: `${formatNumberWithThousandSeparator(Number(medicine.price))} VND`,
+  }));
+
   const handleSearch = () => {
     var filteredMedicines_ = filteredMedicines;
-    if (basedOn != "") {
+    if (searchTerm !== "") {
+      // Search by medicine name only
       filteredMedicines_ = filteredMedicines.filter((item) =>
-        String(item[basedOn])
+        String(item.name)
           .toLowerCase()
           .startsWith(String(searchTerm).toLowerCase())
       );
     } else {
-      console.log("Please choose Based on");
+      // Show all medicines if no search term
+      setPresentList(medicines);
+      return;
     }
     setPresentList(filteredMedicines_);
   };
 
   const handleChoose = (id: number) => {
+    if (!isEditingMedicine) return; // Only allow selection when in editing mode
+
     for (let i = 0; i < presentList.length; i++) {
       if (presentList[i].id == id) {
-        setChoosedMedicine({ ...presentList[i], quantity_in_stock: 0 });
+        setChoosedMedicine({ ...presentList[i] });
+        break;
       }
     }
   };
@@ -73,19 +88,19 @@ export default function Regulations() {
   };
 
   const handleChangeExaminationFee = (value: number) => {
-    setExamonationFee(value);
+    setExamonationFee(Math.max(0, value));
   };
 
   const handleChangeMaxPatientsPerDay = (value: number) => {
-    setMaxPatientsPerDay(value);
+    setMaxPatientsPerDay(Math.max(0, value));
   };
 
   const handleChangeMaxDiseaseTypes = (value: number) => {
-    setMaxDiseaseTypes(value);
+    setMaxDiseaseTypes(Math.max(0, value));
   };
 
   const handleChangeMaxMedicines = (value: number) => {
-    setMaxMedicines(value);
+    setMaxMedicines(Math.max(0, value));
   };
 
   const handleSave = async (new_medicine: Medicine) => {
@@ -115,7 +130,7 @@ export default function Regulations() {
     for (const setting of settings) {
       try {
         await settingService.updateByKey(setting);
-        res += "Cập nhật thành công " + setting.key + "\n";
+        res = "Cập nhật thành công ";
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const message =
@@ -193,13 +208,21 @@ export default function Regulations() {
   }, [activeTab]);
 
   useEffect(() => {
+    setIsEditingMedicine(false);
+  }, [activeTab]);
+
+  useEffect(() => {
     if (isAddingMedicine) {
       setChoosedMedicine(null);
     }
   }, [isAddingMedicine]);
 
   useEffect(() => {
-    if (choosedMedicine && choosedMedicine.id != undefined) {
+    if (
+      choosedMedicine &&
+      choosedMedicine.id !== undefined &&
+      choosedMedicine.id !== 0
+    ) {
       setIsAddingMedicine(false);
     }
   }, [choosedMedicine]);
@@ -262,45 +285,32 @@ export default function Regulations() {
           <div className="p-6 bg-gray-50 min-h-96">
             {activeTab === "MEDICINE" && (
               <>
-                {/* Month Selector and Search */}
+                {/* Search Section */}
                 <div className="mb-6 space-y-4">
-                  {/* Search Section */}
                   <div className="flex items-center gap-4">
                     <div className="relative flex-1 max-w-md">
-                      <input
-                        type="text"
-                        placeholder="Search..."
+                      <MedicineSearchInput
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <Search
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                        size={20}
+                        onChange={setSearchTerm}
+                        placeholder="Search by medicine name..."
                       />
                     </div>
 
-                    <span className="text-blue-600 font-light italic">
-                      Based on
-                    </span>
-                    <select
-                      value={basedOn}
-                      onChange={(e) => {
-                        const value = e.target.value as keyof Medicine;
-                        setBasedOn(value);
-                      }}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48"
-                    >
-                      <option value="">-- Choose --</option>
-                      <option value="id">Medicine ID</option>
-                      <option value="name">Medicine Name</option>
-                    </select>
-
                     <button
                       onClick={handleSearch}
-                      className="px-6 py-2 text-blue-500 bg-white border border-blue-500 rounded-md hover:bg-blue-600 hover:text-white transition-colors font-medium"
+                      className="px-6 py-2 bg-[#1250B1] text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
                     >
-                      Find
+                      Search
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSearchTerm("");
+                        setPresentList(medicines);
+                      }}
+                      className="px-4 py-2 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-100 transition-colors font-medium"
+                    >
+                      Clear
                     </button>
                   </div>
                 </div>
@@ -310,7 +320,7 @@ export default function Regulations() {
             {activeTab === "MEDICINE" && (
               <>
                 <p className="text-blue-600 font-semibold text-lg mt-4 mb-2">
-                  Select the medication requiring an update
+                  {isEditingMedicine ? "Select a medication" : ""}
                 </p>
                 <Table
                   headers={[
@@ -320,7 +330,7 @@ export default function Regulations() {
                     "Quantity",
                     "Price",
                   ]}
-                  filteredItems={presentList}
+                  filteredItems={formattedPresentList}
                   attributesOfItem={[
                     "id",
                     "name",
@@ -328,26 +338,75 @@ export default function Regulations() {
                     "quantity_in_stock",
                     "price",
                   ]}
+                  weights={[
+                    "w-[100px]",
+                    "w-[200px]",
+                    "w-[300px]",
+                    "w-[200px]",
+                    "w-[200px]",
+                  ]}
                   handleChoose={handleChoose}
+                  selectedItemId={choosedMedicine?.id || null}
+                  isEditing={isEditingMedicine}
                 />
 
-                <div className="p-6">
+                {/* Edit and Add Buttons - positioned below table */}
+                <div className="flex justify-between items-center mt-6">
                   <button
-                    className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors font-medium"
                     onClick={() => {
-                      setIsAddingMedicine(true);
+                      setIsAddingMedicine(!isAddingMedicine);
+                      if (!isAddingMedicine) {
+                        setChoosedMedicine({
+                          id: 0,
+                          name: "",
+                          unit: "",
+                          quantity_in_stock: 0,
+                          price: "",
+                          description: "",
+                        });
+                        setIsEditingMedicine(false);
+                      } else {
+                        setChoosedMedicine(null);
+                        setIsEditingMedicine(false);
+                      }
                     }}
+                    className={`px-6 py-2 rounded-md transition-colors font-medium ${
+                      isAddingMedicine
+                        ? "bg-gray-500 text-white hover:bg-gray-700"
+                        : "bg-blue-500 text-white hover:bg-blue-700"
+                    }`}
                   >
-                    Add a new medicine
+                    {isAddingMedicine ? "Cancel Creating" : "Add Medicine"}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsEditingMedicine(!isEditingMedicine);
+                      if (!isEditingMedicine) {
+                        setChoosedMedicine(null);
+                        setIsAddingMedicine(false);
+                      }
+                    }}
+                    className={`px-6 py-2 rounded-md transition-colors font-medium ${
+                      isEditingMedicine
+                        ? "bg-gray-500 text-white hover:bg-gray-700"
+                        : "bg-[#1250B1] text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {isEditingMedicine ? "Cancel Editing" : "Edit"}
                   </button>
                 </div>
                 {(choosedMedicine || isAddingMedicine) && (
                   <div className="max-w-full mx-auto bg-white p-6 rounded shadow mt-10">
                     <h2 className="text-xl font-bold text-blue-600 mb-1">
-                      {choosedMedicine?.name}
+                      {isAddingMedicine
+                        ? "Add New Medicine"
+                        : choosedMedicine?.name}
                     </h2>
                     <p className="text-sm text-blue-400 mb-4">
-                      {!isAddingMedicine && <>ID. {choosedMedicine?.id}</>}
+                      {!isAddingMedicine && choosedMedicine?.id && (
+                        <>ID. {choosedMedicine.id}</>
+                      )}
                     </p>
 
                     <form className="space-y-4">
@@ -359,10 +418,12 @@ export default function Regulations() {
                           <input
                             type="text"
                             value={choosedMedicine ? choosedMedicine.name : ""}
-                            className="w-2/3 border border-blue-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder={"Type here..."}
+                            className="w-2/3 border border-blue-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
                             onChange={(e) =>
                               handleChangeAttr("name", e.target.value)
                             }
+                            disabled={!isAddingMedicine && !isEditingMedicine}
                           />
                         </div>
                         <div>
@@ -383,7 +444,7 @@ export default function Regulations() {
                                 ? choosedMedicine.quantity_in_stock
                                 : 0
                             }
-                            className="w-2/3 border border-blue-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-2/3 border border-blue-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
                             onChange={(e) => {
                               handleChangeAttr(
                                 "quantity_in_stock",
@@ -392,6 +453,7 @@ export default function Regulations() {
                                   : 0
                               );
                             }}
+                            disabled={!isAddingMedicine && !isEditingMedicine}
                           />
                         </div>
                         <div>
@@ -400,16 +462,20 @@ export default function Regulations() {
                           </label>
                           <input
                             type="text"
-                            value={choosedMedicine ? choosedMedicine.price : ""}
-                            className="w-2/3 border border-blue-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={choosedMedicine ? `${formatNumberWithThousandSeparator(Number(choosedMedicine.price))} VND` : ""}
+                            placeholder={"Type here..."}
+                            className="w-2/3 border border-blue-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
                             onChange={(e) => {
+                              // Remove VND and commas, then convert to number
+                              const numericValue = e.target.value.replace(/[^\d]/g, "");
                               handleChangeAttr(
                                 "price",
-                                !isNaN(Number(e.target.value))
-                                  ? e.target.value
+                                !isNaN(Number(numericValue))
+                                  ? numericValue
                                   : "0"
                               );
                             }}
+                            disabled={!isAddingMedicine && !isEditingMedicine}
                           />
                         </div>
 
@@ -417,17 +483,37 @@ export default function Regulations() {
                           <label className="block text-sm text-blue-600 font-semibold mb-1">
                             Unit
                           </label>
-                          <select
-                            className="w-full border border-blue-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={choosedMedicine ? choosedMedicine.unit : ""}
-                            onChange={(e) => {
-                              handleChangeAttr("unit", e.target.value);
-                            }}
-                          >
-                            <option value="">-- Choose --</option>
-                            <option value="viên">Viên</option>
-                            <option value="chai">Chai</option>
-                          </select>
+                          <div className="relative">
+                            <select
+                              className="w-full border border-gray-300 rounded-full px-4 py-2 text-black bg-white appearance-none pr-10"
+                              value={
+                                choosedMedicine ? choosedMedicine.unit : ""
+                              }
+                              onChange={(e) => {
+                                handleChangeAttr("unit", e.target.value);
+                              }}
+                              disabled={!isAddingMedicine && !isEditingMedicine}
+                            >
+                              <option value="viên">Viên</option>
+                              <option value="chai">Chai</option>
+                            </select>
+                            {/* Icon mũi tên dropdown */}
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <div>
@@ -439,10 +525,12 @@ export default function Regulations() {
                           value={
                             choosedMedicine ? choosedMedicine.description : ""
                           }
-                          className="w-full border border-blue-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder={"Type here..."}
+                          className="w-full border border-blue-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
                           onChange={(e) => {
                             handleChangeAttr("description", e.target.value);
                           }}
+                          disabled={!isAddingMedicine && !isEditingMedicine}
                         />
                       </div>
 
@@ -455,32 +543,38 @@ export default function Regulations() {
                               if (choosedMedicine) {
                                 handleSave(choosedMedicine);
                                 setFetch(fetch + 1);
+                                setIsAddingMedicine(false);
+                                setChoosedMedicine(null);
                               }
                             }}
                           >
                             Save
                           </button>
                         )}
-                        {!isAddingMedicine && (
+                        {!isAddingMedicine && isEditingMedicine && (
                           <button
                             type="button"
-                            className="bg-white text-blue-500 border border-blue-500 px-6 py-2 rounded hover:bg-blue-600 font-semibold w-1/10 text-center"
+                            className="bg-[#1250B1] text-white border border-blue-700 px-6 py-2 rounded hover:bg-blue-600 font-semibold w-1/10 text-center"
                             onClick={() => {
                               handleUpdate(choosedMedicine as Medicine);
                               setFetch(fetch + 1);
+                              setIsEditingMedicine(false);
+                              setChoosedMedicine(null);
                             }}
                           >
                             Replace
                           </button>
                         )}
-                        {!isAddingMedicine && (
+                        {!isAddingMedicine && isEditingMedicine && (
                           <button
                             type="button"
-                            className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600 font-semibold w-1/10 text-center"
+                            className="bg-white text-red-500 border border-red-500 px-6 py-2 rounded hover:bg-red-200 font-semibold w-1/10 text-center"
                             onClick={() => {
                               if (choosedMedicine) {
                                 handleDelete(choosedMedicine.id);
                                 setFetch(fetch + 1);
+                                setIsEditingMedicine(false);
+                                setChoosedMedicine(null);
                               }
                             }}
                           >
@@ -497,23 +591,27 @@ export default function Regulations() {
               <>
                 <div className="p-8 bg-white w-full max-w-5xl mx-auto">
                   <h2 className="text-2xl font-bold text-blue-600 mb-8">
-                    Clinic’s Operation
+                    Clinic's Operation
                   </h2>
 
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-blue-600 mb-1">
-                        Examination Fee
+                        Examination fee
                       </label>
                       <input
-                        type="number"
+                        type="text"
                         className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g. 100"
-                        value={examinationFee}
+                        placeholder="e.g. 100,000"
+                        value={formatNumberWithThousandSeparator(
+                          examinationFee
+                        )}
                         onChange={(e) => {
+                          // Remove commas and convert to number
+                          const numericValue = e.target.value.replace(/,/g, "");
                           handleChangeExaminationFee(
-                            !isNaN(Number(e.target.value))
-                              ? Number(e.target.value)
+                            !isNaN(Number(numericValue))
+                              ? Number(numericValue)
                               : 0
                           );
                         }}
@@ -522,11 +620,12 @@ export default function Regulations() {
 
                     <div>
                       <label className="block text-sm font-medium text-blue-600 mb-1">
-                        Maximum patients / Day
+                        Maximum patients / day
                       </label>
                       <input
                         type="number"
-                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min="0"
+                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-inner-spin-button]:h-8 [&::-webkit-outer-spin-button]:h-8 [&::-webkit-inner-spin-button]:w-8 [&::-webkit-outer-spin-button]:w-8"
                         placeholder="e.g. 100"
                         value={maxPatientsPerDay}
                         onChange={(e) => {
@@ -547,7 +646,8 @@ export default function Regulations() {
                       </label>
                       <input
                         type="number"
-                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min="0"
+                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-inner-spin-button]:h-8 [&::-webkit-outer-spin-button]:h-8 [&::-webkit-inner-spin-button]:w-8 [&::-webkit-outer-spin-button]:w-8"
                         placeholder="e.g. 100"
                         value={maxDiseaseTypes}
                         onChange={(e) => {
@@ -566,7 +666,8 @@ export default function Regulations() {
                       </label>
                       <input
                         type="number"
-                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        min="0"
+                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-inner-spin-button]:h-8 [&::-webkit-outer-spin-button]:h-8 [&::-webkit-inner-spin-button]:w-8 [&::-webkit-outer-spin-button]:w-8"
                         placeholder="e.g. 100"
                         value={maxMedicines}
                         onChange={(e) => {

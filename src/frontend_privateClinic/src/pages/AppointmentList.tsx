@@ -17,7 +17,6 @@ import { patientService } from "../api/patient.service";
 import type { Patient } from "../api/patient.service";
 import { SearchBar } from "../components/SearchBar";
 import type { SearchBarValues } from "../components/SearchBar";
-import Pagination from "../components/Pagination";
 
 type SearchFormInputs = {
   date: string;
@@ -85,24 +84,6 @@ const AppointmentList = () => {
     name: "",
     status: "",
   });
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
-
-  // Tính toán appointments cho trang hiện tại
-  const getCurrentAppointments = () => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return appointments.slice(startIndex, endIndex);
-  };
-
-  // Tính tổng số trang
-  const totalPages = Math.ceil(appointments.length / ITEMS_PER_PAGE);
-
-  // Xử lý khi chuyển trang
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -320,11 +301,17 @@ const AppointmentList = () => {
           onClear={handleClear}
         />
 
+        {editMode && (
+          <p className="text-blue-600 font-semibold text-lg mt-4 mb-2">
+            Select an appointment in the table below
+          </p>
+        )}
+
         {/* Appointments Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full min-w-[1200px]">
-              <thead className="bg-[#1250B1] text-white">
+              <thead className="bg-[#1250B1] text-white sticky top-0 z-10">
                 <tr>
                   <th className="px-3 py-3 text-center">No.</th>
                   <th className="px-3 py-3 text-center">Patient Name</th>
@@ -356,7 +343,7 @@ const AppointmentList = () => {
                     </td>
                   </tr>
                 ) : (
-                  getCurrentAppointments().map((appointment, index) => (
+                  appointments.map((appointment, index) => (
                     <tr
                       key={appointment.id}
                       className={`border-b transition-colors duration-150 cursor-pointer ${
@@ -387,9 +374,7 @@ const AppointmentList = () => {
                         }
                       }}
                     >
-                      <td className="px-6 py-4 text-black">
-                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                      </td>
+                      <td className="px-6 py-4 text-black">{index + 1}</td>
                       <td className="px-3 py-4 text-black">
                         {appointment.patient_name}
                       </td>
@@ -423,72 +408,61 @@ const AppointmentList = () => {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
-          {!loading && !error && appointments.length > 0 && (
-            <div className="px-6 py-4 border-t border-gray-200">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
-          )}
         </div>
 
-        <div className="flex justify-end mt-4 gap-4">
-          {/* Nút Edit hoặc Cancel */}
-          <button
-            className={`${
-              editMode ? "bg-gray-500" : "bg-[#1250B1]"
-            } text-white px-6 py-2 rounded hover:bg-opacity-90`}
-            onClick={() => {
-              if (editMode) {
-                // Nếu đang trong edit mode => chuyển về bình thường
-                setEditMode(false);
-                setSelectedAppointment(null);
-                setEditForm(initialFormState); // reset form nếu cần
-              } else {
-                // Vào edit mode
-                setEditMode(true);
-                setCreateMode(false);
-                setSelectedAppointment(null);
-                setTimeout(() => {
-                  formRef.current?.scrollIntoView({ behavior: "smooth" });
-                }, 100);
-              }
-            }}
-            disabled={createMode}
-          >
-            {editMode ? "Cancel Editing" : "Edit"}
-          </button>
+        <div className="flex justify-between mt-4">
+          {/* Nút Create bên trái */}
+          <div>
+            <button
+              className={`${
+                createMode ? "bg-gray-500" : "bg-blue-500"
+              } text-white px-6 py-2 rounded hover:bg-blue-700`}
+              onClick={() => {
+                if (createMode) {
+                  setCreateMode(false);
+                  setEditForm(initialFormState);
+                  setSelectedAppointment(null);
+                } else {
+                  setCreateMode(true);
+                  setEditMode(false);
+                  setSelectedAppointment(null);
+                  setEditForm(initialFormState);
+                  setTimeout(() => {
+                    formRef.current?.scrollIntoView({ behavior: "smooth" });
+                  }, 100);
+                }
+              }}
+              disabled={editMode}
+            >
+              {createMode ? "Cancel Creating" : "Create"}
+            </button>
+          </div>
 
-          {/* Nút Create */}
-          <button
-            className={`${
-              createMode ? "bg-gray-500" : "bg-green-600"
-            } text-white px-6 py-2 rounded hover:bg-opacity-90`}
-            onClick={() => {
-              if (createMode) {
-                // Đang ở chế độ tạo → huỷ tạo
-                setCreateMode(false);
-                setEditForm(initialFormState);
-                setSelectedAppointment(null);
-              } else {
-                // Bật chế độ tạo mới
-                setCreateMode(true);
-                setEditMode(false);
-                setSelectedAppointment(null);
-                setEditForm(initialFormState);
-                setTimeout(() => {
-                  formRef.current?.scrollIntoView({ behavior: "smooth" });
-                }, 100);
-              }
-            }}
-            disabled={editMode}
-          >
-            {createMode ? "Cancel Creating" : "Create"}
-          </button>
+          {/* Nút Edit bên phải */}
+          <div>
+            <button
+              className={`${
+                editMode ? "bg-gray-500" : "bg-[#1250B1]"
+              } text-white px-6 py-2 rounded hover:bg-blue-700`}
+              onClick={() => {
+                if (editMode) {
+                  setEditMode(false);
+                  setSelectedAppointment(null);
+                  setEditForm(initialFormState);
+                } else {
+                  setEditMode(true);
+                  setCreateMode(false);
+                  setSelectedAppointment(null);
+                  setTimeout(() => {
+                    formRef.current?.scrollIntoView({ behavior: "smooth" });
+                  }, 100);
+                }
+              }}
+              disabled={createMode}
+            >
+              {editMode ? "Cancel Editing" : "Edit"}
+            </button>
+          </div>
         </div>
 
         {editMode && selectedAppointment && (
@@ -820,13 +794,16 @@ const AppointmentList = () => {
             ref={formRef}
             className="mt-6 p-6 bg-white rounded shadow border border-gray-200"
           >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-green-800">
+            {/* Title with full-width border and button positioned absolutely */}
+            <div className="mb-6 relative">
+              <h2 className="text-2xl font-bold text-blue-500 border-b-2 border-blue-300 pb-2">
                 ➕ Create New Appointment
               </h2>
+
+              {/* Button positioned absolutely on the same line */}
               <button
                 onClick={() => setIsPatientModalOpen(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"
+                className="absolute top-[-8px] right-0 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"
               >
                 <svg
                   className="w-5 h-5"
@@ -1222,7 +1199,7 @@ const AppointmentList = () => {
             {/* Buttons */}
             <div className="mt-6 flex justify-end gap-4">
               <button
-                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+                className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-700"
                 onClick={() => {
                   console.log(">>> Button clicked");
                   if (selectedPatient) {
