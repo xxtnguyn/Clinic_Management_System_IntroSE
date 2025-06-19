@@ -81,3 +81,15 @@ class AuthService {
 }
 
 export const authService = new AuthService();
+
+export function getCurrentStaffId(): number | null {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded.staff_id || decoded.id || null;
+  } catch {
+    return null;
+  }
+}
