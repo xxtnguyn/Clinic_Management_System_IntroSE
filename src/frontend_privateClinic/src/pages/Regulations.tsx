@@ -269,6 +269,19 @@ export default function Regulations() {
     fetchMaxMedicines();
   }, [activeTab]);
 
+  useEffect(() => {
+    // Search động theo tên thuốc
+    if (searchTerm.trim() === "") {
+      setPresentList(medicines);
+    } else {
+      setPresentList(
+        medicines.filter((item) =>
+          item.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+  }, [searchTerm, medicines]);
+
   return (
     <div className="min-h-screen w-full">
       <HeaderDashboard currentUser={user} />
@@ -295,14 +308,6 @@ export default function Regulations() {
                         placeholder="Search by medicine name..."
                       />
                     </div>
-
-                    <button
-                      onClick={handleSearch}
-                      className="px-6 py-2 bg-[#1250B1] text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-                    >
-                      Search
-                    </button>
-
                     <button
                       onClick={() => {
                         setSearchTerm("");

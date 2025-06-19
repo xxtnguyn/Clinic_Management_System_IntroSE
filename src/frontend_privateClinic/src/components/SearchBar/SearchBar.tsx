@@ -32,22 +32,31 @@ const SearchBar: React.FC<SearchBarProps> = ({
     <div className="mb-8 flex flex-wrap items-end gap-x-6 gap-4">
       <DateSearchInput
         selectedDate={selectedDate}
-        onChange={onDateChange}
+        onChange={(date) => {
+          onDateChange(date);
+          onSearch();
+        }}
         label="Date"
       />
 
-      <PatientSearchInput value={values.name} onChange={onNameChange} />
+      <PatientSearchInput
+        value={values.name}
+        onChange={(value) => {
+          onNameChange(value);
+          onSearch();
+        }}
+        onEnter={onSearch}
+      />
 
-      <StatusSelect value={values.status} onChange={onStatusChange} />
+      <StatusSelect
+        value={values.status}
+        onChange={(value) => {
+          onStatusChange(value);
+          onSearch();
+        }}
+      />
 
       <div className="flex gap-4 ml-auto">
-        <button
-          type="button"
-          onClick={onSearch}
-          className="bg-[#1250B1] text-white px-6 py-2 rounded hover:bg-blue-700 cursor-pointer"
-        >
-          Search
-        </button>
         <button
           type="button"
           onClick={onClear}

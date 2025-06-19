@@ -26,6 +26,7 @@ type SearchFormInputs = {
 
 const AppointmentList = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointmentsRaw, setAppointmentsRaw] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -123,6 +124,7 @@ const AppointmentList = () => {
       setError("");
       const response = await appointmentService.getAppointments();
       setAppointments(response);
+      setAppointmentsRaw(response);
     } catch (err: any) {
       setError(err.message || "Failed to fetch appointments");
       console.error("Error fetching appointments:", err);
@@ -131,40 +133,49 @@ const AppointmentList = () => {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (values = searchValues) => {
     try {
       setLoading(true);
       setError("");
-
-      const result = await appointmentService.getAppointments(
-        searchValues.status,
-        searchValues.date,
-        searchValues.name
-      );
-
-      const filtered = result.filter((appointment: Appointment) => {
-        const normalizedDate = formatDateTimetoAPIFormat(
-          appointment.appointment_date
-        );
-
-        const matchDate = searchValues.date
-          ? normalizedDate === searchValues.date
-          : true;
-
-        const matchName = searchValues.name
-          ? appointment.patient_name
-              .toLowerCase()
-              .split(" ")
-              .some((word) => word.startsWith(searchValues.name.toLowerCase()))
-          : true;
-
-        const matchStatus = searchValues.status
-          ? appointment.status === searchValues.status
-          : true;
-
-        return matchDate && matchName && matchStatus;
+      console.log("[SEARCH] Truyền vào API:", {
+        status: values.status,
+        date: values.date,
+        name: values.name,
       });
-
+      const result = await appointmentService.getAppointments(
+        values.status,
+        values.date,
+        values.name
+      );
+      console.log("[SEARCH] Danh sách trả về:");
+      result.forEach((appointment) => {
+        console.log({
+          status: appointment.status,
+          date: appointment.appointment_date,
+          name: appointment.patient_name,
+        });
+      });
+      // Filter lại ở frontend theo ngày và tên (giống PatientRecords)
+      let filtered = result;
+      if (values.date) {
+        filtered = filtered.filter((appointment) => {
+          const apptDate = new Date(appointment.appointment_date);
+          const yyyy = apptDate.getFullYear();
+          const mm = String(apptDate.getMonth() + 1).padStart(2, "0");
+          const dd = String(apptDate.getDate()).padStart(2, "0");
+          const apptDateStr = `${yyyy}-${mm}-${dd}`;
+          return apptDateStr === values.date;
+        });
+      }
+      if (values.name && values.name.trim() !== "") {
+        const search = values.name.toLowerCase();
+        filtered = filtered.filter((appointment) =>
+          appointment.patient_name
+            .toLowerCase()
+            .split(" ")
+            .some((word) => word.startsWith(search))
+        );
+      }
       setAppointments(filtered);
     } catch (err: any) {
       const message = err?.message || "Unexpected error";
@@ -259,6 +270,12 @@ const AppointmentList = () => {
     });
   };
 
+  // Thêm useEffect search động
+  useEffect(() => {
+    handleSearch(searchValues);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValues]);
+
   return (
     <div className="min-h-screen w-full bg-gray-50">
       <HeaderDashboard currentUser={user} />
@@ -273,31 +290,16 @@ const AppointmentList = () => {
           selectedDate={selectedDate}
           onDateChange={(date) => {
             setSelectedDate(date);
-            if (date) {
-              setSearchValues((prev) => ({
-                ...prev,
-                date: formatDateForAPI(date),
-              }));
-            } else {
-              setSearchValues((prev) => ({
-                ...prev,
-                date: "",
-              }));
-            }
+            const newDate = date ? formatDateForAPI(date) : "";
+            setSearchValues((prev) => ({ ...prev, date: newDate }));
           }}
           onNameChange={(value) => {
-            setSearchValues((prev) => ({
-              ...prev,
-              name: value,
-            }));
+            setSearchValues((prev) => ({ ...prev, name: value }));
           }}
           onStatusChange={(value) => {
-            setSearchValues((prev) => ({
-              ...prev,
-              status: value,
-            }));
+            setSearchValues((prev) => ({ ...prev, status: value }));
           }}
-          onSearch={handleSearch}
+          onSearch={() => handleSearch(searchValues)}
           onClear={handleClear}
         />
 

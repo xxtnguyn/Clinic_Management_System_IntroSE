@@ -1,15 +1,29 @@
-import React from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
 import HeroSection from "../components/HeroSection";
 import HeaderDashboard from "../components/HeaderDashboard";
 
 const Dashboard: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const { currentUser } = location.state || {};
+  let { currentUser } = location.state || {};
 
-  console.log("location.state", location.state);
+  // Try to recover user from localStorage if not present
+  useEffect(() => {
+    if (!currentUser) {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        currentUser = JSON.parse(storedUser);
+      } else {
+        navigate("/", { replace: true });
+      }
+    }
+  }, []);
+
+  if (!currentUser) return null; // Or a loading spinner
+
   const name = currentUser.fullName;
   const role = currentUser?.role?.name || "";
   const capitalizedRole = role

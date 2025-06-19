@@ -7,6 +7,7 @@ interface DateSearchInputProps {
   onChange: (date: Date | null) => void;
   label?: string;
   className?: string;
+  onSelect?: (date: Date | null) => void;
 }
 
 const DateSearchInput: React.FC<DateSearchInputProps> = ({
@@ -14,6 +15,7 @@ const DateSearchInput: React.FC<DateSearchInputProps> = ({
   onChange,
   label = "Appointment Date",
   className = "w-40",
+  onSelect,
 }) => {
   return (
     <div className={`relative ${className} z-50`}>
@@ -22,7 +24,12 @@ const DateSearchInput: React.FC<DateSearchInputProps> = ({
       </label>
       <DatePicker
         selected={selectedDate}
-        onChange={onChange}
+        onChange={(date) => {
+          onChange(date);
+          if (typeof onSelect === "function") {
+            onSelect(date);
+          }
+        }}
         dateFormat="dd/MM/yyyy"
         className="w-full border border-gray-300 rounded-full px-4 py-2 pr-10 text-black shadow-sm bg-white placeholder-gray-400"
         placeholderText="dd/mm/yyyy"

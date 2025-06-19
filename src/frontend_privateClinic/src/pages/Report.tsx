@@ -226,11 +226,17 @@ const Report = () => {
 
   useEffect(() => {
     if (activeTab === "MEDICINE") {
-      setPresentList(filteredMedicines);
-    } else {
-      setPresentList(filteredRevenues);
+      if (searchTerm.trim() === "") {
+        setPresentList(medicineStatistic);
+      } else {
+        setPresentList(
+          medicineStatistic.filter((item) =>
+            item.name.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+        );
+      }
     }
-  }, [activeTab, filteredRevenues, filteredMedicines]);
+  }, [searchTerm, medicineStatistic, activeTab]);
 
   return (
     <div className="min-h-screen w-full">
@@ -277,14 +283,6 @@ const Report = () => {
                       placeholder="Search by medicine name..."
                     />
                   </div>
-
-                  <button
-                    onClick={() => handleSearch(filteredMedicines)}
-                    className="px-6 py-2 bg-[#1250B1] text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Search
-                  </button>
-
                   <button
                     onClick={() => {
                       setSearchTerm("");

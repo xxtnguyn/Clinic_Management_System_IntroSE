@@ -3,7 +3,6 @@ import searchIcon from "../assets/search.png";
 import { type Appointment } from "../api/appointment.service";
 import { formatDateTimeForDisplay } from "../utils/dateUtils";
 
-
 interface AppointmentSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -155,9 +154,6 @@ const AppointmentSelectionModal: React.FC<AppointmentSelectionModalProps> = ({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Time
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -192,19 +188,6 @@ const AppointmentSelectionModal: React.FC<AppointmentSelectionModalProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {appointment.appointment_time}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          appointment.status === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : appointment.status === "cancelled"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
-                      >
-                        {appointment.status}
-                      </span>
                     </td>
                   </tr>
                 ))}

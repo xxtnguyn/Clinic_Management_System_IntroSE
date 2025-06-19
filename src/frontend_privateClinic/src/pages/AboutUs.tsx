@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import member1 from "../assets/Nguyen.png";
 import member2 from "../assets/Vuong.png";
 import member3 from "../assets/thi.jpeg";
@@ -78,6 +78,9 @@ const teamMembers = [
 ];
 
 const AboutUs: React.FC = () => {
+  const navigate = useNavigate();
+  const isAuthenticated = localStorage.getItem("token") !== null;
+
   return (
     <div className="h-screen w-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth">
       {/* Giới thiệu NDCC Clinic - Trang đầu tiên */}
@@ -107,9 +110,28 @@ const AboutUs: React.FC = () => {
 
       {/* Link về Home */}
       <div className="fixed bottom-2 left-4 z-10">
-        <Link to="/" className="text-blue-700 text-sm hover:underline">
+        <button
+          onClick={() => {
+            if (isAuthenticated) {
+              // Lấy currentUser từ localStorage nếu có
+              const storedUser = localStorage.getItem("user");
+              let currentUser = undefined;
+              if (storedUser) {
+                currentUser = JSON.parse(storedUser);
+              }
+              if (currentUser) {
+                navigate("/dashboard", { state: { currentUser } });
+              } else {
+                navigate("/dashboard"); // fallback nếu không có user
+              }
+            } else {
+              navigate("/");
+            }
+          }}
+          className="text-blue-700 text-sm hover:underline bg-transparent border-none cursor-pointer"
+        >
           &larr; Back to Home
-        </Link>
+        </button>
       </div>
 
       {/* Mỗi thành viên là một section full screen */}

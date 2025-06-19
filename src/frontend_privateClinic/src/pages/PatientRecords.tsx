@@ -42,30 +42,22 @@ const PatientRecord = () => {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (values = searchValues) => {
     try {
       setLoading(true);
       setError("");
-
       const result = await patientService.getPatientsExaminationHistory(
-        searchValues.name,
-        searchValues.date
+        values.name,
+        values.date
       );
-
-      // Filter results to match both name and date if provided
       const filtered = result.filter((patient: PatientExaminationHistory) => {
         const normalizedDate = convertToAPIDateFormat(patient["Ngày Khám"]);
-        const matchDate = searchValues.date
-          ? normalizedDate === searchValues.date
-          : true;
-        const matchName = searchValues.name
-          ? patient["Họ Tên"]
-              .toLowerCase()
-              .includes(searchValues.name.toLowerCase())
+        const matchDate = values.date ? normalizedDate === values.date : true;
+        const matchName = values.name
+          ? patient["Họ Tên"].toLowerCase().includes(values.name.toLowerCase())
           : true;
         return matchDate && matchName;
       });
-
       setPatients(filtered);
     } catch (err: any) {
       const message = err?.message || "Unexpected error";
@@ -107,11 +99,19 @@ const PatientRecord = () => {
                   ...prev,
                   date: formatDateForAPI(date),
                 }));
+                handleSearch({
+                  ...searchValues,
+                  date: formatDateForAPI(date),
+                });
               } else {
                 setSearchValues((prev) => ({
                   ...prev,
                   date: "",
                 }));
+                handleSearch({
+                  ...searchValues,
+                  date: "",
+                });
               }
             }}
             label="Visit Date"
@@ -124,17 +124,15 @@ const PatientRecord = () => {
                 ...prev,
                 name: value,
               }));
+              handleSearch({
+                ...searchValues,
+                name: value,
+              });
             }}
+            onEnter={() => handleSearch(searchValues)}
           />
 
           <div className="flex gap-4 ml-auto">
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="bg-[#1250B1] text-white px-6 py-2 rounded hover:bg-opacity-90 cursor-pointer"
-            >
-              Search
-            </button>
             <button
               type="button"
               onClick={handleClear}

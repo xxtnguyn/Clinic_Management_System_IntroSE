@@ -137,7 +137,7 @@ const Invoice = () => {
       for (let i = 0; i < invoices.length; i++) {
         invoices[i].examination_date = invoices[i].examination_date;
         if (invoices[i].payment_date) {
-          invoices[i].payment_date = invoices[i].payment_date.slice(0, 10);
+          invoices[i].payment_date = invoices[i].payment_date;
         } else {
           invoices[i].payment_date = "yyyy-MM-dd";
         }
@@ -234,7 +234,7 @@ const Invoice = () => {
         ...defaultInvoice,
         patient_name: choosedMedicalRecord.patient_name,
         patient_id: choosedMedicalRecord.patient_id,
-        examination_date: choosedMedicalRecord.examination_date.slice(0, 10),
+        examination_date: choosedMedicalRecord.examination_date,
         examination_fee: String(examinationFee),
       });
     }
@@ -265,10 +265,10 @@ const Invoice = () => {
     }
   };
   const handleUpdate = async () => {
+    console.log(choosedInvoice.payment_date);
     try {
       await invoiceService.updateInvoice(choosedInvoice.id, {
         notes: choosedInvoice.notes,
-        payment_date: choosedInvoice.payment_date + "T19:30:00+07:00",
       });
       alert("Hóa đơn cập nhật thành công");
       setUpdate(update + 1);
@@ -326,7 +326,11 @@ const Invoice = () => {
     examination_date: formatDateTimeForDisplay(invoice.examination_date),
   }));
 
-  console.log("Date: ", formattedInvoices);
+  useEffect(() => {
+    handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValues]);
+
   return (
     <div className="min-h-screen w-full">
       <HeaderDashboard currentUser={user} />
@@ -364,13 +368,6 @@ const Invoice = () => {
           />
 
           <div className="flex gap-4 ml-auto">
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="bg-[#1250B1] text-white px-6 py-2 rounded hover:bg-blue-700 cursor-pointer"
-            >
-              Search
-            </button>
             <button
               type="button"
               onClick={handleClear}
@@ -546,9 +543,11 @@ const Invoice = () => {
                       </div>
                       <div className="flex-1 p-3">
                         <input
-                          type="date"
+                          type="text"
                           className="w-full p-2 border border-gray-300 rounded bg-gray-100 cursor-not-allowed focus:outline-none text-sm"
-                          value={choosedInvoice.examination_date}
+                          value={formatDateTimeForDisplay(
+                            choosedInvoice.examination_date
+                          )}
                           readOnly
                           disabled
                         />
@@ -658,15 +657,11 @@ const Invoice = () => {
                         </div>
                         <div className="flex-1 p-3">
                           <input
-                            type="date"
-                            className="w-full p-2 border border-gray-300 rounded focus:outline-none text-sm"
-                            value={choosedInvoice.payment_date}
-                            onChange={(e) => {
-                              setChoosedInvoice({
-                                ...choosedInvoice,
-                                payment_date: e.target.value,
-                              });
-                            }}
+                            type="text"
+                            className="w-full p-2 border border-gray-300 rounded bg-gray-100 cursor-not-allowed focus:outline-none text-sm"
+                            value={formatDateTimeForDisplay(
+                              choosedInvoice.payment_date
+                            )}
                           />
                         </div>
                       </div>
