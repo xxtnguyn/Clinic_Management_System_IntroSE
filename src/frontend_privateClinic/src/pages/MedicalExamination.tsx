@@ -104,6 +104,13 @@ const MedicalExamination: React.FC = () => {
   const [usageSearchTerm, setUsageSearchTerm] = useState("");
   const usageDropdownRefs = useRef<{ [id: number]: HTMLDivElement | null }>({});
 
+  // Thêm biến kiểm tra đủ thông tin để add prescription
+  const isAddPrescriptionDisabled =
+    !patient.id ||
+    !patient["Ngày Khám"] ||
+    !patient["Triệu Chứng"] ||
+    !patient["Loại Bệnh"];
+
   // Fetch medicines on component mount
   useEffect(() => {
     const fetchMedicines = async () => {
@@ -111,7 +118,7 @@ const MedicalExamination: React.FC = () => {
         const data = await medicineService.getMedicines();
         setMedicines(data.map((m) => ({ ...m, price: Number(m.price) })));
       } catch (err: any) {
-        setMedicineError(err.message || "Không thể lấy danh sách thuốc");
+        setMedicineError("Không thể lấy danh sách thuốc");
       } finally {
         setMedicineLoading(false);
       }
@@ -126,9 +133,7 @@ const MedicalExamination: React.FC = () => {
         const data = await diseaseTypeService.getDiseaseTypes(); // data là DiseaseType[]
         setDiseaseTypes(data);
       } catch (err: any) {
-        setDiseaseTypesError(
-          err.message || "Không thể lấy danh sách loại bệnh"
-        );
+        setDiseaseTypesError("Không thể lấy danh sách loại bệnh");
       } finally {
         setDiseaseTypesLoading(false);
       }
@@ -149,7 +154,7 @@ const MedicalExamination: React.FC = () => {
           );
           setAppointments(filteredAppointments);
         } catch (err: any) {
-          setAppointmentError(err.message || "Failed to fetch appointments");
+          setAppointmentError("Failed to fetch appointments");
         } finally {
           setAppointmentLoading(false);
         }
@@ -165,9 +170,7 @@ const MedicalExamination: React.FC = () => {
         const data = await usageInstructionService.getUsageInstructions();
         setUsageInstructions(data);
       } catch (err: any) {
-        setUsageInstructionsError(
-          err.message || "Không thể lấy hướng dẫn sử dụng"
-        );
+        setUsageInstructionsError("Không thể lấy hướng dẫn sử dụng");
       } finally {
         setUsageInstructionsLoading(false);
       }
@@ -394,7 +397,7 @@ const MedicalExamination: React.FC = () => {
 
         {/* Patient Info Table */}
         {loading ? (
-          <div className="text-center py-10">Loading...</div>
+          <div className="text-center py-10">Đang tải...</div>
         ) : error ? (
           <div className="text-center py-10 text-red-500">{error}</div>
         ) : (
@@ -402,20 +405,22 @@ const MedicalExamination: React.FC = () => {
             <tbody>
               <tr className="border-b border-blue-500">
                 <td className="font-bold px-4 py-2 w-1/4 text-gray-900">
-                  Patient Name:
+                  Patient Name: <span className="text-red-500">*</span>
                 </td>
                 <td className="px-4 py-2 w-1/4 text-gray-900 border-r border-r-blue-500">
                   {patient["Họ Tên"]}
                 </td>
                 <td className="font-bold px-4 py-2 w-1/4 text-gray-900">
-                  Visit Date:
+                  Visit Date: <span className="text-red-500">*</span>
                 </td>
                 <td className="px-4 py-2 w-1/4 text-gray-900">
                   {patient["Ngày Khám"]}
                 </td>
               </tr>
               <tr className="border-blue-500">
-                <td className="font-bold px-4 py-2 text-gray-900">Symptoms:</td>
+                <td className="font-bold px-4 py-2 text-gray-900">
+                  Symptoms: <span className="text-red-500">*</span>
+                </td>
                 <td className="px-4 py-2 text-gray-900 border-r border-r-blue-500">
                   <input
                     type="text"
@@ -428,7 +433,7 @@ const MedicalExamination: React.FC = () => {
                   />
                 </td>
                 <td className="font-bold px-4 py-2 text-gray-900">
-                  Diagnosed Illness:
+                  Diagnosed Illness: <span className="text-red-500">*</span>
                 </td>
                 <td className="px-4 py-2 text-gray-900">
                   <div className="relative" ref={diseaseDropdownRef}>
@@ -494,8 +499,8 @@ const MedicalExamination: React.FC = () => {
                           ) : filteredDiseaseTypes.length === 0 ? (
                             <div className="px-3 py-2 text-sm text-gray-500">
                               {diseaseSearchTerm
-                                ? "No matching disease types found"
-                                : "No disease types available"}
+                                ? "Không tìm thấy loại bệnh phù hợp"
+                                : "Không có loại bệnh nào"}
                             </div>
                           ) : (
                             filteredDiseaseTypes.map((disease) => (
@@ -532,8 +537,11 @@ const MedicalExamination: React.FC = () => {
               showPrescriptionSection
                 ? "bg-white text-red-500 border border-red-300 hover:bg-red-200"
                 : "bg-[#1250B1] text-white hover:bg-blue-700"
+            } ${
+              isAddPrescriptionDisabled ? "opacity-50 cursor-not-allowed" : ""
             }`}
             onClick={() => {
+              if (isAddPrescriptionDisabled) return;
               if (showPrescriptionSection) {
                 setShowPrescriptionSection(false);
                 setPrescription([]);
@@ -541,6 +549,7 @@ const MedicalExamination: React.FC = () => {
                 setShowPrescriptionSection(true);
               }
             }}
+            disabled={isAddPrescriptionDisabled}
           >
             {showPrescriptionSection
               ? "Remove prescription"
@@ -615,7 +624,7 @@ const MedicalExamination: React.FC = () => {
                         colSpan={7}
                         className="text-center py-4 text-gray-400"
                       >
-                        No medicines found
+                        Không tìm thấy thuốc nào
                       </td>
                     </tr>
                   ) : (
@@ -839,8 +848,8 @@ const MedicalExamination: React.FC = () => {
                                 ).length === 0 ? (
                                 <div className="px-3 py-2 text-sm text-gray-500">
                                   {usageSearchTerm
-                                    ? "No matching usage instructions found"
-                                    : "No usage instructions available"}
+                                    ? "Không tìm thấy hướng dẫn sử dụng phù hợp"
+                                    : "Không có hướng dẫn sử dụng nào"}
                                 </div>
                               ) : (
                                 usageInstructions
@@ -889,7 +898,7 @@ const MedicalExamination: React.FC = () => {
                 {prescription.length === 0 && (
                   <tr>
                     <td colSpan={6} className="text-center py-4 text-gray-400">
-                      No medicines added
+                      Chưa thêm thuốc nào
                     </td>
                   </tr>
                 )}

@@ -86,6 +86,49 @@ const AppointmentList = () => {
     status: "",
   });
 
+  // State để lưu các trường thiếu khi nhấn Create
+  const [missingFields, setMissingFields] = useState<string[]>([]);
+
+  // Helper: kiểm tra form hợp lệ cho Create
+  const getMissingFields = () => {
+    const fields: string[] = [];
+    if (editForm.patient_name.trim() === "") fields.push("patient_name");
+    if (editForm.gender.trim() === "") fields.push("gender");
+    if (editForm.birth_year.trim() === "") fields.push("birth_year");
+    if (editForm.phone.trim() === "") fields.push("phone");
+    if (editForm.address.trim() === "") fields.push("address");
+    if (!editForm.appointment_date) fields.push("appointment_date");
+    if (!editForm.appointment_time) fields.push("appointment_time");
+    return fields;
+  };
+
+  // Sort appointments by status priority and date
+  const sortAppointments = (appointments: Appointment[]) => {
+    const statusPriority = {
+      in_progress: 1,
+      waiting: 2,
+      completed: 3,
+      cancelled: 4,
+    };
+
+    return appointments.sort((a, b) => {
+      // First sort by status priority
+      const statusA =
+        statusPriority[a.status as keyof typeof statusPriority] || 5;
+      const statusB =
+        statusPriority[b.status as keyof typeof statusPriority] || 5;
+
+      if (statusA !== statusB) {
+        return statusA - statusB;
+      }
+
+      // If same status, sort by appointment date (newest first)
+      const dateA = new Date(a.appointment_date).getTime();
+      const dateB = new Date(b.appointment_date).getTime();
+      return dateB - dateA;
+    });
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -123,10 +166,12 @@ const AppointmentList = () => {
       setLoading(true);
       setError("");
       const response = await appointmentService.getAppointments();
-      setAppointments(response);
-      setAppointmentsRaw(response);
+
+      const sortedResponse = sortAppointments(response);
+      setAppointments(sortedResponse);
+      setAppointmentsRaw(sortedResponse);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch appointments");
+      setError(err.message || "Không thể tải danh sách cuộc hẹn");
       console.error("Error fetching appointments:", err);
     } finally {
       setLoading(false);
@@ -176,6 +221,8 @@ const AppointmentList = () => {
             .some((word) => word.startsWith(search))
         );
       }
+
+      filtered = sortAppointments(filtered);
       setAppointments(filtered);
     } catch (err: any) {
       const message = err?.message || "Unexpected error";
@@ -276,6 +323,74 @@ const AppointmentList = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchValues]);
 
+  // 1. Helper for time comparison
+  const getTimeOptions = (selectedDate: Date | null) => {
+    const allTimes = [
+      "07:00",
+      "07:15",
+      "07:30",
+      "07:45",
+      "08:00",
+      "08:15",
+      "08:30",
+      "08:45",
+      "09:00",
+      "09:15",
+      "09:30",
+      "09:45",
+      "10:00",
+      "10:15",
+      "10:30",
+      "10:45",
+      "11:00",
+      "11:15",
+      "11:30",
+      "11:45",
+      "12:00",
+      "12:15",
+      "12:30",
+      "12:45",
+      "13:00",
+      "13:15",
+      "13:30",
+      "13:45",
+      "14:00",
+      "14:15",
+      "14:30",
+      "14:45",
+      "15:00",
+      "15:15",
+      "15:30",
+      "15:45",
+      "16:00",
+      "16:15",
+      "16:30",
+      "16:45",
+      "17:00",
+      "17:15",
+      "17:30",
+      "17:45",
+      "18:00",
+    ];
+    if (!selectedDate) return allTimes;
+    const now = new Date();
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    if (!isToday) return allTimes;
+    // Only show times greater than now
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    return allTimes.filter((timeStr) => {
+      const [h, m] = timeStr.split(":").map(Number);
+      const minutes = h * 60 + m;
+      return minutes > currentMinutes;
+    });
+  };
+
+  // Tạo biến kiểm tra disabled
+  const isEditLocked =
+    !!selectedAppointment &&
+    (selectedAppointment.status === "completed" ||
+      selectedAppointment.status === "cancelled");
+
   return (
     <div className="min-h-screen w-full bg-gray-50">
       <HeaderDashboard currentUser={user} />
@@ -305,7 +420,7 @@ const AppointmentList = () => {
 
         {editMode && (
           <p className="text-blue-600 font-semibold text-lg mt-4 mb-2">
-            Select an appointment in the table below
+            Chọn một cuộc hẹn trong bảng bên dưới
           </p>
         )}
 
@@ -313,7 +428,7 @@ const AppointmentList = () => {
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             <table className="w-full min-w-[1200px]">
-              <thead className="bg-[#1250B1] text-white sticky top-0 z-10">
+              <thead className="bg-[#1250B1] text-white sticky top-0 z-0">
                 <tr>
                   <th className="px-3 py-3 text-center">No.</th>
                   <th className="px-3 py-3 text-center">Patient Name</th>
@@ -329,7 +444,7 @@ const AppointmentList = () => {
                 {loading ? (
                   <tr>
                     <td colSpan={8} className="text-center py-4">
-                      Loading...
+                      Đang tải...
                     </td>
                   </tr>
                 ) : error ? (
@@ -341,7 +456,7 @@ const AppointmentList = () => {
                 ) : appointments.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center py-4 text-black">
-                      No appointments found
+                      Không có cuộc hẹn nào
                     </td>
                   </tr>
                 ) : (
@@ -537,12 +652,20 @@ const AppointmentList = () => {
                         setEditForm((prev) => ({
                           ...prev,
                           appointment_date: date.toISOString(),
+                          appointment_time: "", // reset time if date changes
                         }));
+                        if (missingFields.includes("appointment_date")) {
+                          setMissingFields((prev) =>
+                            prev.filter((f) => f !== "appointment_date")
+                          );
+                        }
                       }
                     }}
                     dateFormat="dd/MM/yyyy"
                     className="w-full border border-gray-300 rounded-full px-4 py-2 pr-10 text-black shadow-sm bg-white"
                     placeholderText="dd/mm/yyyy"
+                    minDate={new Date()}
+                    disabled={isEditLocked}
                   />
 
                   {/* Icon mũi tên chỉ xuống giống dropdown */}
@@ -569,62 +692,33 @@ const AppointmentList = () => {
                     Appointment Time
                   </label>
                   <select
-                    className="w-40 bg-white border border-gray-300 text-gray-700 rounded-full px-4 py-2 text-base shadow-sm appearance-none"
+                    className={`w-40 bg-white border ${
+                      missingFields.includes("appointment_time")
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    } text-gray-700 rounded-full px-4 py-2 text-base shadow-sm appearance-none`}
                     value={editForm.appointment_time}
                     onChange={(e) => {
                       setEditForm((prev) => ({
                         ...prev,
                         appointment_time: e.target.value,
                       }));
+                      if (
+                        missingFields.includes("appointment_time") &&
+                        e.target.value !== ""
+                      ) {
+                        setMissingFields((prev) =>
+                          prev.filter((f) => f !== "appointment_time")
+                        );
+                      }
                     }}
+                    disabled={isEditLocked}
                   >
-                    {[
-                      "07:00",
-                      "07:15",
-                      "07:30",
-                      "07:45",
-                      "08:00",
-                      "08:15",
-                      "08:30",
-                      "08:45",
-                      "09:00",
-                      "09:15",
-                      "09:30",
-                      "09:45",
-                      "10:00",
-                      "10:15",
-                      "10:30",
-                      "10:45",
-                      "11:00",
-                      "11:15",
-                      "11:30",
-                      "11:45",
-                      "12:00",
-                      "12:15",
-                      "12:30",
-                      "12:45",
-                      "13:00",
-                      "13:15",
-                      "13:30",
-                      "13:45",
-                      "14:00",
-                      "14:15",
-                      "14:30",
-                      "14:45",
-                      "15:00",
-                      "15:15",
-                      "15:30",
-                      "15:45",
-                      "16:00",
-                      "16:15",
-                      "16:30",
-                      "16:45",
-                      "17:00",
-                      "17:15",
-                      "17:30",
-                      "17:45",
-                      "18:00",
-                    ].map((timeShort) => {
+                    {getTimeOptions(
+                      editForm.appointment_date
+                        ? new Date(editForm.appointment_date)
+                        : null
+                    ).map((timeShort) => {
                       const timeFull = timeShort + ":00";
                       return (
                         <option key={timeFull} value={timeFull}>
@@ -671,7 +765,12 @@ const AppointmentList = () => {
                           (opt) => opt.value === editForm.status
                         )?.label || "Waiting"
                       }
-                      className="w-40 border border-gray-300 rounded-full px-4 py-2 text-black bg-white cursor-pointer shadow-sm appearance-none pr-10"
+                      className={`w-40 border ${
+                        missingFields.includes("status")
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } rounded-full px-4 py-2 text-black bg-white cursor-pointer shadow-sm appearance-none pr-10`}
+                      disabled={isEditLocked}
                     />
 
                     {/* Icon mũi tên nằm trong input, sát phải */}
@@ -711,6 +810,11 @@ const AppointmentList = () => {
                                 status: option.value,
                               }));
                               setIsStatusOpen(false);
+                              if (missingFields.includes("status")) {
+                                setMissingFields((prev) =>
+                                  prev.filter((f) => f !== "status")
+                                );
+                              }
                             }}
                           >
                             <span
@@ -741,6 +845,7 @@ const AppointmentList = () => {
                     placeholder="Enter note..."
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-black placeholder-gray-400 resize-none"
                     rows={4}
+                    disabled={isEditLocked}
                   />
                 </div>
               </div>
@@ -749,25 +854,28 @@ const AppointmentList = () => {
             {/* Buttons */}
             <div className="mt-6 flex justify-end gap-4">
               <button
-                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+                className={`bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700${
+                  selectedAppointment &&
+                  (selectedAppointment.status === "completed" ||
+                    selectedAppointment.status === "cancelled")
+                    ? " opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
                 onClick={() => {
                   if (!selectedAppointment) return;
-
-                  // So sánh status hiện tại với status trong form edit
+                  if (
+                    selectedAppointment.status === "completed" ||
+                    selectedAppointment.status === "cancelled"
+                  )
+                    return;
                   const isStatusChanged =
                     editForm.status !== selectedAppointment.status;
-
-                  // Chuẩn bị dữ liệu gửi lên API
                   const updatedData = {
                     appointment_date: editForm.appointment_date,
                     appointment_time: editForm.appointment_time,
                     notes: editForm.notes,
-                    // chỉ thêm status nếu có thay đổi
                     ...(isStatusChanged && { status: editForm.status }),
                   };
-
-                  console.log("updatedData", updatedData, isStatusChanged);
-
                   appointmentService
                     .updateAppointment(selectedAppointment.id, updatedData)
                     .then(() => {
@@ -778,12 +886,17 @@ const AppointmentList = () => {
                     })
                     .catch((err) => {
                       alert(
-                        "❌ Failed to update appointment due to" +
+                        "Cập nhật cuộc hẹn thất bại: " +
                           (err?.message || err) +
-                          ". Please contact the administrator."
+                          ". Vui lòng liên hệ quản trị viên."
                       );
                     });
                 }}
+                disabled={
+                  selectedAppointment &&
+                  (selectedAppointment.status === "completed" ||
+                    selectedAppointment.status === "cancelled")
+                }
               >
                 Save Changes
               </button>
@@ -858,11 +971,15 @@ const AppointmentList = () => {
                 {/* Patient Name */}
                 <div>
                   <label className="block mb-1 font-medium text-black">
-                    Patient Name
+                    Patient Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    className="w-120 border border-gray-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
+                    className={`w-120 border ${
+                      missingFields.includes("patient_name")
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    } rounded-full px-3 py-2 text-black placeholder-gray-400`}
                     value={editForm.patient_name}
                     onChange={(e) => {
                       const filtered = e.target.value.replace(
@@ -873,6 +990,14 @@ const AppointmentList = () => {
                         ...prev,
                         patient_name: filtered,
                       }));
+                      if (
+                        missingFields.includes("patient_name") &&
+                        filtered.trim() !== ""
+                      ) {
+                        setMissingFields((prev) =>
+                          prev.filter((f) => f !== "patient_name")
+                        );
+                      }
                     }}
                     placeholder="Enter patient name"
                   />
@@ -881,18 +1006,30 @@ const AppointmentList = () => {
                 {/* Address */}
                 <div>
                   <label className="block mb-1 font-medium text-black">
-                    Address
+                    Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    className="w-120 border border-gray-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
+                    className={`w-120 border ${
+                      missingFields.includes("address")
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    } rounded-full px-3 py-2 text-black placeholder-gray-400`}
                     value={editForm.address}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setEditForm((prev) => ({
                         ...prev,
                         address: e.target.value,
-                      }))
-                    }
+                      }));
+                      if (
+                        missingFields.includes("address") &&
+                        e.target.value.trim() !== ""
+                      ) {
+                        setMissingFields((prev) =>
+                          prev.filter((f) => f !== "address")
+                        );
+                      }
+                    }}
                     placeholder="Enter address "
                   />
                 </div>
@@ -902,11 +1039,15 @@ const AppointmentList = () => {
                   {/* Phone */}
                   <div className="flex-1 min-w-[220px]">
                     <label className="block mb-1 font-medium text-black">
-                      Phone
+                      Phone <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      className="w-50 border border-gray-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
+                      className={`w-50 border ${
+                        missingFields.includes("phone")
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } rounded-full px-3 py-2 text-black placeholder-gray-400`}
                       value={editForm.phone}
                       onChange={(e) => {
                         const filtered = e.target.value.replace(
@@ -917,6 +1058,14 @@ const AppointmentList = () => {
                           ...prev,
                           phone: filtered,
                         }));
+                        if (
+                          missingFields.includes("phone") &&
+                          filtered.trim() !== ""
+                        ) {
+                          setMissingFields((prev) =>
+                            prev.filter((f) => f !== "phone")
+                          );
+                        }
                       }}
                       placeholder="Enter phone number "
                     />
@@ -924,19 +1073,31 @@ const AppointmentList = () => {
 
                   <div className="flex-1 min-w-[120px]">
                     <label className="block mb-1 font-medium text-black">
-                      Year of Birth
+                      Year of Birth <span className="text-red-500">*</span>
                     </label>
 
                     <div className="relative">
                       <select
-                        className="w-full border border-gray-300 rounded-full px-4 py-2 text-black bg-white appearance-none pr-10"
+                        className={`w-full border ${
+                          missingFields.includes("birth_year")
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        } rounded-full px-4 py-2 text-black bg-white appearance-none pr-10`}
                         value={editForm.birth_year}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setEditForm((prev) => ({
                             ...prev,
                             birth_year: e.target.value,
-                          }))
-                        }
+                          }));
+                          if (
+                            missingFields.includes("birth_year") &&
+                            e.target.value !== ""
+                          ) {
+                            setMissingFields((prev) =>
+                              prev.filter((f) => f !== "birth_year")
+                            );
+                          }
+                        }}
                       >
                         <option value="">Select Year</option>
                         {[...Array(45)].map((_, i) => {
@@ -970,12 +1131,16 @@ const AppointmentList = () => {
 
                   <div className="flex-1 min-w-[200px]">
                     <label className="block mb-1 font-medium text-black">
-                      Gender
+                      Gender <span className="text-red-500">*</span>
                     </label>
 
                     <div className="relative">
                       <select
-                        className="w-30 border border-gray-300 rounded-full px-4 py-2 text-black bg-white appearance-none pr-10"
+                        className={`w-30 border ${
+                          missingFields.includes("gender")
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        } rounded-full px-4 py-2 text-black bg-white appearance-none pr-10`}
                         value={editForm.gender}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -984,6 +1149,11 @@ const AppointmentList = () => {
                               ...prev,
                               gender: val,
                             }));
+                            if (missingFields.includes("gender")) {
+                              setMissingFields((prev) =>
+                                prev.filter((f) => f !== "gender")
+                              );
+                            }
                           }
                         }}
                       >
@@ -1044,7 +1214,7 @@ const AppointmentList = () => {
                   {/* Appointment Date */}
                   <div className="relative w-full max-w-xs">
                     <label className="block mb-1 font-medium text-black">
-                      Appointment Date
+                      Appointment Date <span className="text-red-500">*</span>
                     </label>
 
                     <DatePicker
@@ -1059,11 +1229,22 @@ const AppointmentList = () => {
                             ...prev,
                             appointment_date: date.toISOString(),
                           }));
+                          if (missingFields.includes("appointment_date")) {
+                            setMissingFields((prev) =>
+                              prev.filter((f) => f !== "appointment_date")
+                            );
+                          }
                         }
                       }}
                       dateFormat="dd/MM/yyyy"
-                      className="w-40 border border-gray-300 rounded-full px-4 py-2 pr-10 text-black bg-white appearance-none"
+                      className={`w-40 border ${
+                        missingFields.includes("appointment_date")
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } rounded-full px-4 py-2 pr-10 text-black bg-white appearance-none`}
                       placeholderText="dd/mm/yyyy"
+                      minDate={new Date()}
+                      disabled={isEditLocked}
                     />
 
                     {/* Icon mũi tên dropdown */}
@@ -1086,67 +1267,38 @@ const AppointmentList = () => {
 
                   <div className="relative w-full max-w-xs">
                     <label className="block mb-1 font-medium text-black">
-                      Appointment Time
+                      Appointment Time <span className="text-red-500">*</span>
                     </label>
 
                     <select
-                      className="w-30 border border-gray-300 rounded-full px-4 py-2 text-black bg-white appearance-none pr-10"
+                      className={`w-30 border ${
+                        missingFields.includes("appointment_time")
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } rounded-full px-4 py-2 text-black bg-white appearance-none pr-10`}
                       value={editForm.appointment_time}
                       onChange={(e) => {
                         setEditForm((prev) => ({
                           ...prev,
                           appointment_time: e.target.value,
                         }));
+                        if (
+                          missingFields.includes("appointment_time") &&
+                          e.target.value !== ""
+                        ) {
+                          setMissingFields((prev) =>
+                            prev.filter((f) => f !== "appointment_time")
+                          );
+                        }
                       }}
+                      disabled={isEditLocked}
                     >
-                      <option value="">Select Time</option>
-                      {[
-                        "07:00",
-                        "07:15",
-                        "07:30",
-                        "07:45",
-                        "08:00",
-                        "08:15",
-                        "08:30",
-                        "08:45",
-                        "09:00",
-                        "09:15",
-                        "09:30",
-                        "09:45",
-                        "10:00",
-                        "10:15",
-                        "10:30",
-                        "10:45",
-                        "11:00",
-                        "11:15",
-                        "11:30",
-                        "11:45",
-                        "12:00",
-                        "12:15",
-                        "12:30",
-                        "12:45",
-                        "13:00",
-                        "13:15",
-                        "13:30",
-                        "13:45",
-                        "14:00",
-                        "14:15",
-                        "14:30",
-                        "14:45",
-                        "15:00",
-                        "15:15",
-                        "15:30",
-                        "15:45",
-                        "16:00",
-                        "16:15",
-                        "16:30",
-                        "16:45",
-                        "17:00",
-                        "17:15",
-                        "17:30",
-                        "17:45",
-                        "18:00",
-                      ].map((timeShort) => {
+                      {/* <option value="">Select Time</option> */}
+                      {getTimeOptions(
+                        editForm.appointment_date
+                          ? new Date(editForm.appointment_date)
+                          : null
+                      ).map((timeShort) => {
                         const timeFull = timeShort + ":00";
                         return (
                           <option key={timeFull} value={timeFull}>
@@ -1203,6 +1355,9 @@ const AppointmentList = () => {
               <button
                 className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-700"
                 onClick={() => {
+                  const missing = getMissingFields();
+                  setMissingFields(missing);
+                  if (missing.length > 0) return;
                   console.log(">>> Button clicked");
                   if (selectedPatient) {
                     // Đã chọn bệnh nhân → chỉ tạo cuộc hẹn

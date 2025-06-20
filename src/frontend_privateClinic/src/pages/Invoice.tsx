@@ -68,6 +68,28 @@ interface SearchValues {
   name: string;
 }
 
+// Helper để lấy màu cho status
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case "paid":
+      return "bg-green-100 text-green-700";
+    case "pending":
+      return "bg-yellow-100 text-yellow-700";
+    case "cancelled":
+      return "bg-red-100 text-red-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
+
+// Helper để viết hoa status
+const formatStatus = (status: string) => {
+  return status
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
 const Invoice = () => {
   const [searchValues, setSearchValues] = useState<SearchValues>({
     date: "",
@@ -324,6 +346,15 @@ const Invoice = () => {
       Number(invoice.medicine_fee)
     ),
     examination_date: formatDateTimeForDisplay(invoice.examination_date),
+    status: (
+      <span
+        className={`px-2 py-0.5 rounded-full text-sm font-semibold ${getStatusColor(
+          invoice.status
+        )}`}
+      >
+        {formatStatus(invoice.status)}
+      </span>
+    ),
   }));
 
   useEffect(() => {
@@ -638,13 +669,13 @@ const Invoice = () => {
                           Status:
                         </div>
                         <div className="flex-1 p-3">
-                          <input
-                            type="text"
-                            className="w-full p-2 border border-gray-300 rounded bg-gray-100 cursor-not-allowed focus:outline-none text-sm"
-                            value={choosedInvoice.status}
-                            readOnly
-                            disabled
-                          />
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-sm font-semibold ${getStatusColor(
+                              choosedInvoice.status
+                            )}`}
+                          >
+                            {formatStatus(choosedInvoice.status)}
+                          </span>
                         </div>
                       </div>
                     </div>
