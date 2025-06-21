@@ -7,6 +7,7 @@ interface PatientSearchInputProps {
   label?: string;
   className?: string;
   placeholder?: string;
+  onEnter?: () => void;
 }
 
 const PatientSearchInput: React.FC<PatientSearchInputProps> = ({
@@ -15,6 +16,7 @@ const PatientSearchInput: React.FC<PatientSearchInputProps> = ({
   label = "Patient Name",
   className = "flex-1 max-w-md",
   placeholder = "Search...",
+  onEnter,
 }) => {
   return (
     <div className={`relative ${className}`}>
@@ -27,6 +29,11 @@ const PatientSearchInput: React.FC<PatientSearchInputProps> = ({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full border border-gray-300 rounded-full px-4 py-2 pr-10 text-black shadow-sm placeholder-gray-400 bg-white"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && typeof onEnter === "function") {
+            onEnter();
+          }
+        }}
       />
 
       {/* Search icon */}

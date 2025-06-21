@@ -6,7 +6,12 @@ export interface Setting {
   descriptions?: string;
 }
 
-class SettingService {
+export const settingService = {
+  getSettingByKey: async (key: string): Promise<Setting | null> => {
+    const response = await axiosInstance.get(`/settings/${key}`);
+    return response.data.data || null;
+  },
+
   async getValueByKey(key: string) {
     try {
       const response = await axiosInstance.get(`/settings/key/${key}`);
@@ -18,7 +23,7 @@ class SettingService {
         throw new Error("Đã xảy ra lỗi khi lấy dữ liệu Setting");
       }
     }
-  }
+  },
 
   async updateByKey(setting: Setting) {
     try {
@@ -34,7 +39,5 @@ class SettingService {
         throw new Error("Đã xảy ra lỗi khi update setting.");
       }
     }
-  }
-}
-
-export const settingService = new SettingService();
+  },
+};

@@ -9,27 +9,29 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Footer from "../components/Footer";
 import HeroSection from "../components/HeroSection";
 import logo from "../assets/logo_without_text.png";
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 
 // Schemas for validation (copied from ForgotPasswordModal.tsx)
-const forgotPasswordSchema = yup.object({
-  email: yup
-    .string()
-    .required('Email is required')
-    .email('Please enter a valid email'),
-}).required();
+const forgotPasswordSchema = yup
+  .object({
+    email: yup
+      .string()
+      .required("Email is required")
+      .email("Please enter a valid email"),
+  })
+  .required();
 
-const loginSchema = yup.object({
-  username: yup
-    .string()
-    .required('Username is required'),
-  password: yup
-    .string()
-    .required('Password is required')
-    .min(6, 'Password must be at least 6 characters'),
-}).required();
+const loginSchema = yup
+  .object({
+    username: yup.string().required("Username is required"),
+    password: yup
+      .string()
+      .required("Password is required")
+      .min(6, "Password must be at least 6 characters"),
+  })
+  .required();
 
 type LoginFormInputs = yup.InferType<typeof loginSchema>;
 type ForgotPasswordFormInputs = yup.InferType<typeof forgotPasswordSchema>;
@@ -45,21 +47,32 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<'login' | 'forgotPassword'>('login');
+  const [viewMode, setViewMode] = useState<"login" | "forgotPassword">("login");
   const { login } = useAuth();
 
   // RHF for Login Form
-  const { register: registerLogin, handleSubmit: handleSubmitLogin, formState: { errors: loginErrors } } = useForm<LoginFormInputs>({
-    resolver: yupResolver(loginSchema)
+  const {
+    register: registerLogin,
+    handleSubmit: handleSubmitLogin,
+    formState: { errors: loginErrors },
+  } = useForm<LoginFormInputs>({
+    resolver: yupResolver(loginSchema),
   });
 
   // RHF for Forgot Password Form
-  const { register: registerForgotPassword, handleSubmit: handleSubmitForgotPassword, formState: { errors: forgotPasswordErrors } } = useForm<ForgotPasswordFormInputs>({
-    resolver: yupResolver(forgotPasswordSchema)
+  const {
+    register: registerForgotPassword,
+    handleSubmit: handleSubmitForgotPassword,
+    formState: { errors: forgotPasswordErrors },
+  } = useForm<ForgotPasswordFormInputs>({
+    resolver: yupResolver(forgotPasswordSchema),
   });
 
   const handleLogin = async (data: LoginFormInputs) => {
-    const payload: LoginPayload = { username: data.username, password: data.password };
+    const payload: LoginPayload = {
+      username: data.username,
+      password: data.password,
+    };
     try {
       setIsLoading(true);
       await authService.login(payload);
@@ -83,8 +96,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     try {
       setIsLoading(true);
       await authService.forgotPassword({ email: data.email });
-      alert('If your email exists, a password reset link has been sent to it.');
-      setViewMode('login');
+      alert("If your email exists, a password reset link has been sent to it.");
+      setViewMode("login");
     } catch (error: any) {
       alert(error.message);
     } finally {
@@ -94,7 +107,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      if (viewMode === 'login') handleSubmitLogin(handleLogin)();
+      if (viewMode === "login") handleSubmitLogin(handleLogin)();
     }
   };
 
@@ -107,11 +120,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       className="flex items-center justify-center min-h-screen"
     >
       <div className="p-6 bg-white rounded-xl shadow-xl w-full max-w-sm">
-        <Typography component="h3" level="h3" className="text-2xl font-normal text-center mb-6">
-          {viewMode === 'login' ? 'Sign In' : 'Forgot Password'}
+        <Typography
+          component="h3"
+          level="h3"
+          className="text-2xl font-normal text-center mb-6"
+        >
+          {viewMode === "login" ? "Sign In" : "Forgot Password"}
         </Typography>
 
-        {viewMode === 'login' ? (
+        {viewMode === "login" ? (
           <form onSubmit={handleSubmitLogin(handleLogin)} className="space-y-4">
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -119,11 +136,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               </label>
               <Input
                 placeholder="Type your username"
-                {...registerLogin('username')}
+                {...registerLogin("username")}
                 onKeyDown={handleKeyDown}
               />
               {loginErrors.username && (
-                <span className="text-red-500 text-xs">{loginErrors.username.message}</span>
+                <span className="text-red-500 text-xs">
+                  {loginErrors.username.message}
+                </span>
               )}
             </div>
             <div className="mb-4">
@@ -134,7 +153,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="Type your password"
-                  {...registerLogin('password')}
+                  {...registerLogin("password")}
                   onKeyDown={handleKeyDown}
                   className="pr-10"
                 />
@@ -151,7 +170,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 </button>
               </div>
               {loginErrors.password && (
-                <span className="text-red-500 text-xs">{loginErrors.password.message}</span>
+                <span className="text-red-500 text-xs">
+                  {loginErrors.password.message}
+                </span>
               )}
             </div>
             <button
@@ -162,10 +183,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               {isLoading ? "Signing in..." : "Sign In"}
             </button>
             <div className="mt-4 text-sm text-center">
-              <a href="#"
+              <a
+                href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  setViewMode('forgotPassword');
+                  setViewMode("forgotPassword");
                 }}
                 className="text-blue-600 hover:underline"
               >
@@ -174,7 +196,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             </div>
           </form>
         ) : (
-          <form onSubmit={handleSubmitForgotPassword(handleForgotPasswordSubmit)} className="space-y-4">
+          <form
+            onSubmit={handleSubmitForgotPassword(handleForgotPasswordSubmit)}
+            className="space-y-4"
+          >
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -182,10 +207,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               <Input
                 type="email"
                 placeholder="Enter your email"
-                {...registerForgotPassword('email')}
+                {...registerForgotPassword("email")}
               />
               {forgotPasswordErrors.email && (
-                <span className="text-red-500 text-xs">{forgotPasswordErrors.email.message}</span>
+                <span className="text-red-500 text-xs">
+                  {forgotPasswordErrors.email.message}
+                </span>
               )}
             </div>
             <button
@@ -196,14 +223,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               {isLoading ? "Sending..." : "Send Reset Link"}
             </button>
             <div className="mt-4 text-sm text-center">
-              <a href="#"
+              <a
+                href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  setViewMode('login');
+                  setViewMode("login");
                 }}
                 className="text-blue-600 hover:underline"
               >
-                Back to Login
+                &larr; Back to Login
               </a>
             </div>
           </form>
@@ -249,7 +277,7 @@ const Home: React.FC = () => {
           isOpen={isLoginModalOpen}
           onClose={() => {
             setIsLoginModalOpen(false);
-            const loginModalInstance = document.querySelector('.MuiModal-root');
+            const loginModalInstance = document.querySelector(".MuiModal-root");
             if (loginModalInstance) {
             }
           }}

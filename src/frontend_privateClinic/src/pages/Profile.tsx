@@ -37,6 +37,7 @@ interface ProfileFormData {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
+  email: string;
 }
 
 // Thêm interface cho error messages
@@ -45,6 +46,12 @@ interface PasswordErrors {
   newPassword?: string;
   confirmPassword?: string;
   general?: string;
+}
+
+// Thêm interface cho profile message
+interface ProfileMessage {
+  type: "success" | "error";
+  text: string;
 }
 
 const Profile = () => {
@@ -63,7 +70,7 @@ const Profile = () => {
   );
   const [isBlue, setIsBlue] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: string; text: string } | null>(
+  const [profileMessage, setProfileMessage] = useState<ProfileMessage | null>(
     null
   );
 
@@ -76,6 +83,7 @@ const Profile = () => {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+    email: "",
   });
 
   // Thêm state cho error messages
@@ -124,16 +132,16 @@ const Profile = () => {
 
   useEffect(() => {
     // First try to get user from localStorage
-    const storedUser = localStorage.getItem('user');
-    const initialUser = storedUser ? JSON.parse(storedUser) : (user || null);
-    
+    const storedUser = localStorage.getItem("user");
+    const initialUser = storedUser ? JSON.parse(storedUser) : user || null;
+
     if (initialUser) {
       console.log("Initial user data:", initialUser);
-      
+
       // Handle avatar - check if it's already a full URL or needs the backend URL prefix
       if (initialUser.avatar) {
-        const avatarUrl = initialUser.avatar.startsWith('http') 
-          ? initialUser.avatar 
+        const avatarUrl = initialUser.avatar.startsWith("http")
+          ? initialUser.avatar
           : `${import.meta.env.VITE_BACKEND_URL}${initialUser.avatar}`;
         setProfileImage(avatarUrl);
       } else {
@@ -150,6 +158,7 @@ const Profile = () => {
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
+        email: initialUser.email || "",
       });
 
       // Update current user state
@@ -158,33 +167,37 @@ const Profile = () => {
   }, [user]); // Re-run if user prop changes
 
   // Handle avatar upload
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file || !currentUser) return;
 
     try {
       setIsLoading(true);
       const response = await staffService.uploadAvatar(currentUser.id, file);
-      
+
       // Update the profile image in the UI
       setProfileImage(response.data.data.avatarUrl);
-      
+
       // Update the user data in localStorage
       const updatedUser = { ...currentUser, avatar: response.data.data.avatar };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem("user", JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
-      
-      setMessage({
-        type: 'success',
-        text: 'Cập nhật ảnh đại diện thành công'
+
+      setProfileMessage({
+        type: "success",
+        text: "Cập nhật ảnh đại diện thành công",
       });
     } catch (error) {
       const errorObj = error as { response?: { data?: { message?: string } } };
-      const errorMessage = errorObj?.response?.data?.message || 'Có lỗi xảy ra khi tải lên ảnh đại diện';
-      
-      setMessage({
-        type: 'error',
-        text: errorMessage
+      const errorMessage =
+        errorObj?.response?.data?.message ||
+        "Có lỗi xảy ra khi tải lên ảnh đại diện";
+
+      setProfileMessage({
+        type: "error",
+        text: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -206,7 +219,7 @@ const Profile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setMessage(null);
+    setProfileMessage(null);
 
     try {
       const updateData: Partial<Staff> = {
@@ -215,6 +228,7 @@ const Profile = () => {
         address: formData.address,
         gender: mapGenderToVietnamese(formData.gender),
         birth_date: formData.birthDate,
+        email: formData.email,
         avatar: profileImage.startsWith("http")
           ? profileImage
           : `${import.meta.env.VITE_BACKEND_URL}${profileImage}`,
@@ -243,13 +257,13 @@ const Profile = () => {
         location.state.user = fullUpdatedUser;
       }
 
-      setMessage({
+      setProfileMessage({
         type: "success",
         text: response.data.message || "Cập nhật thông tin thành công",
       });
       setIsEditing(false);
     } catch (error) {
-      setMessage({
+      setProfileMessage({
         type: "error",
         text:
           error instanceof Error
@@ -321,9 +335,9 @@ const Profile = () => {
     );
   }
 
-  console.log("Current user used in HeaderDashboard:", user);
-  console.log("New password:", formData.newPassword);
-  console.log("Confirm password:", formData.confirmPassword);
+  // console.log("Current user used in HeaderDashboard:", user);
+  // console.log("New password:", formData.newPassword);
+  // console.log("Confirm password:", formData.confirmPassword);
   return (
     <div
       className={`min-h-screen w-full flex items-center justify-center transition-colors duration-1000 ${
@@ -423,8 +437,19 @@ const Profile = () => {
               </h2>
               <div className="w-full h-0.5 bg-gray-300 rounded mb-6"></div>
 
+              {profileMessage && (
+                <div
+                  className={`mb-4 p-3 rounded-md ${
+                    profileMessage.type === "success"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {profileMessage.text}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-gray-800">
-                {/* <div className="md:col-span-2"> */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-600 mb-1">
                     Full Name
@@ -434,6 +459,7 @@ const Profile = () => {
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
+                    onFocus={() => setProfileMessage(null)}
                     className="w-full bg-gray-100 rounded-full px-4 py-2 text-base"
                   />
                 </div>
@@ -445,8 +471,9 @@ const Profile = () => {
                   <input
                     type="email"
                     name="email"
-                    value={user.email}
+                    value={formData.email}
                     onChange={handleInputChange}
+                    onFocus={() => setProfileMessage(null)}
                     className="w-full bg-gray-100 rounded-full px-4 py-2 text-base cursor-not-allowed"
                   />
                 </div>
@@ -461,6 +488,7 @@ const Profile = () => {
                       name="phoneNumber"
                       value={formData.phoneNumber}
                       onChange={handleInputChange}
+                      onFocus={() => setProfileMessage(null)}
                       className="w-full bg-gray-100 rounded-full px-4 py-2 text-base"
                     />
                   </div>
@@ -474,6 +502,7 @@ const Profile = () => {
                       name="birthDate"
                       value={formData.birthDate}
                       onChange={handleInputChange}
+                      onFocus={() => setProfileMessage(null)}
                       className="w-full bg-gray-100 rounded-full px-4 py-2 text-base"
                     />
                   </div>
@@ -486,6 +515,7 @@ const Profile = () => {
                       name="gender"
                       value={formData.gender}
                       onChange={handleInputChange}
+                      onFocus={() => setProfileMessage(null)}
                       className="w-full bg-white border border-gray-300 text-gray-700 rounded-full px-4 py-2 text-base shadow-sm appearance-none"
                     >
                       <option value="male">Nam</option>
@@ -516,6 +546,7 @@ const Profile = () => {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
+                    onFocus={() => setProfileMessage(null)}
                     className="w-full bg-gray-100 rounded-lg px-4 py-2 text-base"
                     rows={3}
                   />
@@ -526,8 +557,9 @@ const Profile = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={isLoading}
                 >
-                  Save
+                  {isLoading ? "Processing..." : "Save"}
                 </button>
               </div>
             </form>
