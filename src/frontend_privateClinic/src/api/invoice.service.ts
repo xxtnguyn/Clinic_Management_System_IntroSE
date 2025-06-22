@@ -124,12 +124,13 @@ class InvoiceService {
   async exportInvoicePDF(id: number) {
     try {
       const response = await axiosInstance.get(`/invoices/${id}/pdf`, {
-        responseType: 'blob',
+        responseType: "blob",
       });
       return response.data;
     } catch (error: any) {
       throw {
-        message: error.response?.data?.message || 'Failed to export invoice PDF',
+        message:
+          error.response?.data?.message || "Failed to export invoice as PDF",
       };
     }
   }
