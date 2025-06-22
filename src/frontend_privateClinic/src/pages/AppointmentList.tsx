@@ -539,6 +539,7 @@ const AppointmentList = () => {
                   setCreateMode(false);
                   setEditForm(initialFormState);
                   setSelectedAppointment(null);
+                  setMissingFields([]);
                 } else {
                   setCreateMode(true);
                   setEditMode(false);
