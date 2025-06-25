@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import TabHeaders from "../components/TabHeaders";
 import BlueUnderline from "../components/BlueUnderline";
-import { Search } from "lucide-react";
 import Table from "../components/Table";
 import { medicineService } from "../api/medicine.service";
 import type { CreateMedicineInput } from "../api/medicine.service";
@@ -25,7 +24,6 @@ interface Medicine {
 export default function Regulations() {
   const [activeTab, setActiveTab] = useState("MEDICINE");
   const [searchTerm, setSearchTerm] = useState("");
-  const [basedOn, setBasedOn] = useState<keyof Medicine | "">("");
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [presentList, setPresentList] = useState<Medicine[]>([]);
   const [choosedMedicine, setChoosedMedicine] = useState<Medicine | null>();
@@ -41,30 +39,11 @@ export default function Regulations() {
 
   const { user } = location.state || {};
 
-  const filteredMedicines = medicines;
-
   // Format data for table display with thousand separators for price
   const formattedPresentList = presentList.map((medicine) => ({
     ...medicine,
     price: `${formatNumberWithThousandSeparator(Number(medicine.price))} VND`,
   }));
-
-  const handleSearch = () => {
-    var filteredMedicines_ = filteredMedicines;
-    if (searchTerm !== "") {
-      // Search by medicine name only
-      filteredMedicines_ = filteredMedicines.filter((item) =>
-        String(item.name)
-          .toLowerCase()
-          .startsWith(String(searchTerm).toLowerCase())
-      );
-    } else {
-      // Show all medicines if no search term
-      setPresentList(medicines);
-      return;
-    }
-    setPresentList(filteredMedicines_);
-  };
 
   const handleChoose = (id: number) => {
     if (!isEditingMedicine) return; // Only allow selection when in editing mode
@@ -158,14 +137,10 @@ export default function Regulations() {
     try {
       const res1 = await medicineService.updateMedicineInformation(medicine);
       res += res1.message;
-    } catch (err: any) {
-      res += err.message;
-    }
-    try {
       const res2 = await medicineService.addMedicineQuantity(medicine);
       res += "\n" + res2.message;
     } catch (err: any) {
-      res += "\n" + err.message;
+      res += err.message;
     }
     alert(res);
   };
@@ -192,8 +167,14 @@ export default function Regulations() {
   }, [fetch, activeTab]);
 
   useEffect(() => {
-    setBasedOn("");
-  }, [activeTab, fetch]);
+    setIsEditingMedicine(false);
+  }, [fetch]);
+
+  useEffect(() => {
+    if (!isEditingMedicine && !isAddingMedicine) {
+      setChoosedMedicine(null);
+    }
+  }, [isEditingMedicine]);
 
   useEffect(() => {
     setChoosedMedicine(undefined);
@@ -213,7 +194,15 @@ export default function Regulations() {
 
   useEffect(() => {
     if (isAddingMedicine) {
-      setChoosedMedicine(null);
+      setChoosedMedicine({
+        id: 0,
+        name: "",
+        unit: "viên",
+        quantity_in_stock: 0,
+        price: "0",
+        description: "",
+      });
+      setIsEditingMedicine(false);
     }
   }, [isAddingMedicine]);
 
@@ -360,20 +349,6 @@ export default function Regulations() {
                   <button
                     onClick={() => {
                       setIsAddingMedicine(!isAddingMedicine);
-                      if (!isAddingMedicine) {
-                        setChoosedMedicine({
-                          id: 0,
-                          name: "",
-                          unit: "",
-                          quantity_in_stock: 0,
-                          price: "",
-                          description: "",
-                        });
-                        setIsEditingMedicine(false);
-                      } else {
-                        setChoosedMedicine(null);
-                        setIsEditingMedicine(false);
-                      }
                     }}
                     className={`px-6 py-2 rounded-md transition-colors font-medium ${
                       isAddingMedicine
@@ -572,8 +547,6 @@ export default function Regulations() {
                             onClick={() => {
                               handleUpdate(choosedMedicine as Medicine);
                               setFetch(fetch + 1);
-                              setIsEditingMedicine(false);
-                              setChoosedMedicine(null);
                             }}
                           >
                             Replace
@@ -587,8 +560,6 @@ export default function Regulations() {
                               if (choosedMedicine) {
                                 handleDelete(choosedMedicine.id);
                                 setFetch(fetch + 1);
-                                setIsEditingMedicine(false);
-                                setChoosedMedicine(null);
                               }
                             }}
                           >
