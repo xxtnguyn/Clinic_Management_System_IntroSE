@@ -79,9 +79,9 @@ export default function Table({
                 key={item.id}
                 className={`transition ${
                   isEditing ? "cursor-pointer" : "cursor-default"
-                } ${
-                  selectedItemId === item.id ? "bg-blue-100" : ""
-                } hover:bg-gray-100`}
+                } ${selectedItemId === item.id ? "bg-blue-100" : ""} ${
+                  isEditing ? "hover:bg-gray-200" : "hover:bg-gray-100"
+                }`}
                 onClick={() => handleChoose(item.id)}
               >
                 <td className={"px-4 py-3 text-gray-900 " + _weights[0]}>

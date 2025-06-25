@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import HeaderDashboard from "../components/HeaderDashboard";
 import { useLocation } from "react-router-dom";
-import { Search } from "lucide-react";
+// import { Search } from "lucide-react";
 import Table from "../components/Table";
 import { invoiceService } from "../api/invoice.service";
 import { medicalRecordService } from "../api/medical_record.service";
@@ -111,8 +111,10 @@ const Invoice = () => {
     useState<MedicalRecord>(defaultMedicalRecord);
   const [update, setUpdate] = useState(0);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
-  const [exportTargetInvoice, setExportTargetInvoice] = useState<Invoice_ | null>(null);
+  const [exportTargetInvoice, setExportTargetInvoice] =
+    useState<Invoice_ | null>(null);
   const [showExportConfirm, setShowExportConfirm] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // console.log("Date chosen: ", choosedMedicalRecord);
 
@@ -122,20 +124,20 @@ const Invoice = () => {
       const filtered = invoices.filter((invoice) => {
         const matchDate = searchValues.date
           ? (() => {
-            // Use formatDateTimeForDisplay to get the date in dd/MM/yyyy format
-            const invoiceDateDisplay = formatDateTimeForDisplay(
-              invoice.examination_date
-            );
-            // Convert search date from yyyy-MM-dd to dd/MM/yyyy for comparison
-            const searchDateDisplay = formatDateForDisplay(searchValues.date);
-            return invoiceDateDisplay === searchDateDisplay;
-          })()
+              // Use formatDateTimeForDisplay to get the date in dd/MM/yyyy format
+              const invoiceDateDisplay = formatDateTimeForDisplay(
+                invoice.examination_date
+              );
+              // Convert search date from yyyy-MM-dd to dd/MM/yyyy for comparison
+              const searchDateDisplay = formatDateForDisplay(searchValues.date);
+              return invoiceDateDisplay === searchDateDisplay;
+            })()
           : true;
 
         const matchName = searchValues.name
           ? invoice.patient_name
-            .toLowerCase()
-            .includes(searchValues.name.toLowerCase())
+              .toLowerCase()
+              .includes(searchValues.name.toLowerCase())
           : true;
 
         return matchDate && matchName;
@@ -332,11 +334,21 @@ const Invoice = () => {
 
   // Khi bấm Export PDF
   const handleStartExportPDF = () => {
-    setIsExportingPDF(true);
-    setExportTargetInvoice(null);
-    setIsEditingInvoice(false);
-    setIsAddingInvoice(false);
-    setChoosedInvoice(defaultInvoice);
+    if (isExportingPDF) {
+      // Nếu đang trong chế độ export, hủy bỏ
+      setIsExportingPDF(false);
+      setExportTargetInvoice(null);
+      setIsEditingInvoice(false);
+      setIsAddingInvoice(false);
+      setChoosedInvoice(defaultInvoice);
+    } else {
+      // Nếu chưa trong chế độ export, bắt đầu
+      setIsExportingPDF(true);
+      setExportTargetInvoice(null);
+      setIsEditingInvoice(false);
+      setIsAddingInvoice(false);
+      setChoosedInvoice(defaultInvoice);
+    }
   };
 
   // Khi chọn hóa đơn để export
@@ -352,11 +364,15 @@ const Invoice = () => {
   const handleConfirmExportPDF = async () => {
     if (!exportTargetInvoice) return;
     try {
-      const pdfBlob = await invoiceService.exportInvoicePDF(exportTargetInvoice.id);
+      setIsExporting(true);
+      const pdfBlob = await invoiceService.exportInvoicePDF(
+        exportTargetInvoice.id
+      );
       saveAs(pdfBlob, `invoice-${exportTargetInvoice.id}.pdf`);
     } catch (error: any) {
-      alert(error.message || "Failed to export PDF");
+      alert(error.message || "Xuất PDF thất bại");
     } finally {
+      setIsExporting(false);
       setIsExportingPDF(false);
       setExportTargetInvoice(null);
       setShowExportConfirm(false);
@@ -368,6 +384,9 @@ const Invoice = () => {
     setIsExportingPDF(false);
     setExportTargetInvoice(null);
     setShowExportConfirm(false);
+    setIsEditingInvoice(false);
+    setIsAddingInvoice(false);
+    setChoosedInvoice(defaultInvoice);
   };
 
   // Table handleChoose logic
@@ -463,6 +482,12 @@ const Invoice = () => {
           </p>
         )}
 
+        {isExportingPDF && (
+          <p className="text-green-600 font-semibold text-lg mt-4 mb-2">
+            Select an invoice in the table below to export
+          </p>
+        )}
+
         {/* Table Section */}
         <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
           <Table
@@ -497,8 +522,8 @@ const Invoice = () => {
               isExportingPDF && exportTargetInvoice
                 ? exportTargetInvoice.id
                 : isEditingInvoice && choosedInvoice.id !== 0
-                  ? choosedInvoice.id
-                  : null
+                ? choosedInvoice.id
+                : null
             }
             isEditing={isEditingInvoice || isExportingPDF}
           />
@@ -506,10 +531,11 @@ const Invoice = () => {
 
         <div className="mb-6 flex justify-between">
           <button
-            className={`px-6 py-2 rounded-md font-medium transition-colors ${isAddingInvoice
-              ? "bg-gray-500 text-white hover:bg-gray-600"
-              : "bg-blue-500 text-white hover:bg-blue-600"
-              }`}
+            className={`px-6 py-2 rounded-md font-medium transition-colors ${
+              isAddingInvoice
+                ? "bg-gray-500 text-white hover:bg-gray-600"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
             onClick={() => {
               if (isAddingInvoice) {
                 setIsAddingInvoice(false);
@@ -528,10 +554,11 @@ const Invoice = () => {
 
           <div className="flex gap-4">
             <button
-              className={`px-6 py-2 rounded-md font-medium transition-colors ${isEditingInvoice
-                ? "bg-gray-500 text-white hover:bg-gray-600"
-                : "bg-[#1250B1] text-white hover:bg-blue-700"
-                }`}
+              className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                isEditingInvoice
+                  ? "bg-gray-500 text-white hover:bg-gray-600"
+                  : "bg-[#1250B1] text-white hover:bg-blue-700"
+              }`}
               onClick={() => {
                 if (isEditingInvoice) {
                   setIsEditingInvoice(false);
@@ -547,38 +574,55 @@ const Invoice = () => {
               {isEditingInvoice ? "Cancel Editing" : "Edit"}
             </button>
             <button
-              className={`px-6 py-2 rounded-md font-medium transition-colors ${isExportingPDF
-                ? "bg-gray-500 text-white hover:bg-gray-600"
-                : "bg-green-600 text-white hover:bg-green-700"
-                }`}
+              className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                isExportingPDF
+                  ? "bg-gray-500 text-white hover:bg-gray-600"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              }`}
               onClick={handleStartExportPDF}
               disabled={isAddingInvoice || isEditingInvoice}
             >
-              {isExportingPDF ? "Cancel Export" : "Export PDF"}
+              {isExportingPDF ? "Cancel Exporting" : "Export Invoice"}
             </button>
           </div>
         </div>
 
         {/* Dialog xác nhận xuất PDF */}
         {showExportConfirm && exportTargetInvoice && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
-              <h2 className="text-lg font-semibold mb-4">Xác nhận xuất hóa đơn PDF</h2>
-              <p className="mb-6">Bạn có chắc chắn muốn xuất hóa đơn <b>#{exportTargetInvoice.id}</b> cho bệnh nhân <b>{exportTargetInvoice.patient_name}</b>?</p>
-              <div className="flex justify-end gap-4">
-                <button
-                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
-                  onClick={handleCancelExportPDF}
-                >
-                  Hủy
-                </button>
-                <button
-                  className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-                  onClick={handleConfirmExportPDF}
-                >
-                  Xác nhận
-                </button>
-              </div>
+              <h2 className="text-lg font-semibold mb-4">
+                {isExporting ? "Exporting PDF..." : "Confirm exporting PDF"}
+              </h2>
+              {!isExporting && (
+                <p className="mb-6">
+                  Are you sure you want to export the invoice{" "}
+                  <b>#{exportTargetInvoice.id}</b> for the patient{" "}
+                  <b>{exportTargetInvoice.patient_name}</b>?
+                </p>
+              )}
+              {isExporting && (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                  <p className="text-gray-600">Creating PDF...</p>
+                </div>
+              )}
+              {!isExporting && (
+                <div className="flex justify-end gap-4">
+                  <button
+                    className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                    onClick={handleCancelExportPDF}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                    onClick={handleConfirmExportPDF}
+                  >
+                    Confirm
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -589,8 +633,9 @@ const Invoice = () => {
             <div className="border border-gray-300 rounded-lg overflow-hidden">
               {/* Header */}
               <div
-                className={`${isAddingInvoice ? "bg-blue-500" : "bg-[#1250B1]"
-                  } text-white text-center py-3`}
+                className={`${
+                  isAddingInvoice ? "bg-blue-500" : "bg-[#1250B1]"
+                } text-white text-center py-3`}
               >
                 <h2 className="text-xl font-semibold">
                   {isAddingInvoice ? "Create Invoice" : "Edit Invoice"}
@@ -804,8 +849,9 @@ const Invoice = () => {
                 <div className="w-1/2">
                   {/* Medicine Table Header */}
                   <div
-                    className={`${isAddingInvoice ? "bg-blue-500" : "bg-[#1250B1]"
-                      } text-white`}
+                    className={`${
+                      isAddingInvoice ? "bg-blue-500" : "bg-[#1250B1]"
+                    } text-white`}
                   >
                     <div className="flex">
                       <div className="flex-1 p-2 text-center font-medium border-r border-white-400 text-sm">

@@ -880,7 +880,7 @@ const AppointmentList = () => {
                   appointmentService
                     .updateAppointment(selectedAppointment.id, updatedData)
                     .then(() => {
-                      alert("✅ The appointment has been updated successfully");
+                      alert("✅ Cuộc hẹn đã được cập nhật thành công");
                       setEditMode(false);
                       setSelectedAppointment(null);
                       fetchAppointments();
@@ -1378,7 +1378,7 @@ const AppointmentList = () => {
                     appointmentService
                       .createAppointment(newAppointment)
                       .then(() => {
-                        alert("Appointment created successfully");
+                        alert("Cuộc hẹn đã được tạo thành công");
                         setCreateMode(false);
                         setSelectedPatient(null);
                         setEditForm(initialFormState);
@@ -1386,8 +1386,7 @@ const AppointmentList = () => {
                       })
                       .catch((err) => {
                         alert(
-                          "Failed to create appointment: " +
-                            (err?.message || err)
+                          "Tạo cuộc hẹn thất bại: " + (err?.message || err)
                         );
                       });
                   } else {
@@ -1421,14 +1420,14 @@ const AppointmentList = () => {
                         );
                       })
                       .then(() => {
-                        alert("Patient and Appointment created successfully");
+                        alert("Bệnh nhân và cuộc hẹn đã được tạo thành công");
                         setCreateMode(false);
                         setEditForm(initialFormState);
                         fetchAppointments();
                       })
                       .catch((err) => {
                         alert(
-                          "Failed to create patient/appointment: " +
+                          "Tạo bệnh nhân/cuộc hẹn thất bại: " +
                             (err?.message || err)
                         );
                       });
