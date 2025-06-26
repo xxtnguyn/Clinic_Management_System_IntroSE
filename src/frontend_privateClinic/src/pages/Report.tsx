@@ -243,6 +243,7 @@ const Report = () => {
       <HeaderDashboard currentUser={user} />
 
       <main className="container mx-auto px-8 py-6 mt-16">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Report</h1>
         <div className="max-w-full mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
           {/* Tab Headers */}
           <TabHeaders
