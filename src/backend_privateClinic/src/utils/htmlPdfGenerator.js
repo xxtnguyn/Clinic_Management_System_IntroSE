@@ -21,6 +21,11 @@ class HtmlPdfGenerator {
         return format(new Date(dateString), 'dd/MM/yyyy', { locale: vi });
       };
       
+      // Định dạng tiền tệ: làm tròn số nguyên và thêm dấu phẩy phân cách hàng nghìn
+      const formatCurrency = (num) => {
+        return Math.round(Number(num) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      };
+      
       // Tạo HTML template cho hóa đơn
       const htmlContent = `
         <!DOCTYPE html>
@@ -185,8 +190,8 @@ class HtmlPdfGenerator {
                         <td>${prescription.medicine_name}</td>
                         <td>${prescription.usage_instruction}</td>
                         <td>${prescription.quantity}</td>
-                        <td>${prescription.medicine_price.toLocaleString('vi-VN')}</td>
-                        <td>${prescription.subtotal.toLocaleString('vi-VN')}</td>
+                        <td>${formatCurrency(prescription.medicine_price)}</td>
+                        <td>${formatCurrency(prescription.subtotal)}</td>
                       </tr>
                     `).join('') : 
                     '<tr><td colspan="6" style="text-align: center;">Không có thuốc trong đơn</td></tr>'
@@ -197,14 +202,14 @@ class HtmlPdfGenerator {
             
             <div class="total-section">
               <div class="total-row">
-                <strong>Tiền khám:</strong> ${invoice.examination_fee.toLocaleString('vi-VN')} VNĐ
+                <strong>Tiền khám:</strong> ${formatCurrency(invoice.examination_fee)} VNĐ
               </div>
               <div class="total-row">
-                <strong>Tiền thuốc:</strong> ${invoice.medicine_fee.toLocaleString('vi-VN')} VNĐ
+                <strong>Tiền thuốc:</strong> ${formatCurrency(invoice.medicine_fee)} VNĐ
               </div>
               <div class="separator" style="width: 200px; margin-left: auto;"></div>
               <div class="total-row total-amount">
-                <strong>Tổng thanh toán:</strong> ${invoice.total_fee.toLocaleString('vi-VN')} VNĐ
+                <strong>Tổng thanh toán:</strong> ${formatCurrency(invoice.total_fee)} VNĐ
               </div>
             </div>
             
