@@ -120,6 +120,7 @@ const AboutUs: React.FC = () => {
                 currentUser = JSON.parse(storedUser);
               }
               if (currentUser) {
+                // Chuyển đến dashboard với thông tin user đầy đủ
                 navigate("/dashboard", { state: { currentUser } });
               } else {
                 navigate("/dashboard"); // fallback nếu không có user

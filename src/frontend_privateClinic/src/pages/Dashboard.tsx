@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Footer from "../components/Footer";
 import HeroSection from "../components/HeroSection";
@@ -7,20 +7,24 @@ import HeaderDashboard from "../components/HeaderDashboard";
 const Dashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
-  let { currentUser } = location.state || {};
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Try to recover user from localStorage if not present
   useEffect(() => {
-    if (!currentUser) {
+    let user = location.state?.currentUser;
+
+    if (!user) {
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
-        currentUser = JSON.parse(storedUser);
+        user = JSON.parse(storedUser);
       } else {
         navigate("/", { replace: true });
+        return;
       }
     }
-  }, []);
+
+    setCurrentUser(user);
+  }, [location.state, navigate]);
 
   if (!currentUser) return null; // Or a loading spinner
 

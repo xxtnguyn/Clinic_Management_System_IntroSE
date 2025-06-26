@@ -79,6 +79,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       login();
       onClose();
       const user = await authService.getCurrentUser();
+
+      // Lưu thông tin user vào localStorage để duy trì trạng thái
+      localStorage.setItem("user", JSON.stringify(user));
+
       navigate("/dashboard", {
         state: {
           currentUser: user,
