@@ -50,7 +50,7 @@ export default function Regulations() {
 
     for (let i = 0; i < presentList.length; i++) {
       if (presentList[i].id == id) {
-        setChoosedMedicine({ ...presentList[i] });
+        setChoosedMedicine({ ...presentList[i], quantity_in_stock: 0 });
         break;
       }
     }
