@@ -641,7 +641,7 @@ const MedicalExamination: React.FC = () => {
                         </td>
                         <td className="px-4 py-2 text-center text-gray-900">
                           {formatNumberWithThousandSeparator(
-                            m.price.toLocaleString()
+                            Math.round(m.price)
                           )}
                         </td>
                         <td className="px-4 py-2 text-center text-gray-900">
@@ -658,6 +658,7 @@ const MedicalExamination: React.FC = () => {
                               checked={prescription.some(
                                 (item) => item.id === m.id
                               )}
+                              disabled={m.quantity_in_stock < 1}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   // Add to prescription if not already present
@@ -700,6 +701,11 @@ const MedicalExamination: React.FC = () => {
                               />
                             </svg>
                           </div>
+                          {m.quantity_in_stock < 1 && (
+                            <div className="text-xs text-red-500 mt-1">
+                              Hết thuốc
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -718,6 +724,7 @@ const MedicalExamination: React.FC = () => {
                   <th className="px-4 py-2">No.</th>
                   <th className="px-4 py-2">Medicine</th>
                   <th className="px-4 py-2">Unit</th>
+                  <th className="px-4 py-2">Price (VND)</th>
                   <th className="px-4 py-2">Quantity</th>
                   <th className="px-4 py-2">Usage</th>
                   <th className="px-4 py-2">Notes</th>
@@ -736,10 +743,16 @@ const MedicalExamination: React.FC = () => {
                       {item.unit}
                     </td>
                     <td className="px-4 py-2 text-center text-gray-900">
+                      {formatNumberWithThousandSeparator(
+                        Math.round(item.price)
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-center text-gray-900">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           className="bg-blue-100 text-blue-500 rounded px-2 py-1 font-bold"
                           onClick={() => {
+                            // Giảm số lượng
                             if (item.quantity === 1) {
                               setPrescription((prev) =>
                                 prev.filter((i) => i.id !== item.id)
@@ -760,17 +773,38 @@ const MedicalExamination: React.FC = () => {
                         </button>
                         <span className="mx-2">{item.quantity || 1}</span>
                         <button
-                          className="bg-blue-100 text-blue-500 rounded px-2 py-1 font-bold"
-                          onClick={() =>
+                          className={`bg-blue-100 text-blue-500 rounded px-2 py-1 font-bold ${
+                            item.quantity >=
+                            (medicines.find((m) => m.id === item.id)
+                              ?.quantity_in_stock || 0)
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            // Tìm số lượng tồn kho của thuốc này
+                            const stock =
+                              medicines.find((m) => m.id === item.id)
+                                ?.quantity_in_stock || 0;
+                            if (item.quantity >= stock) {
+                              alert(
+                                "Số lượng thuốc kê không được vượt quá số lượng tồn kho!"
+                              );
+                              return;
+                            }
                             setPrescription((prev) =>
                               prev.map((i) =>
                                 i.id === item.id
                                   ? { ...i, quantity: i.quantity + 1 }
                                   : i
                               )
-                            )
-                          }
+                            );
+                          }}
                           type="button"
+                          disabled={
+                            item.quantity >=
+                            (medicines.find((m) => m.id === item.id)
+                              ?.quantity_in_stock || 0)
+                          }
                         >
                           +
                         </button>

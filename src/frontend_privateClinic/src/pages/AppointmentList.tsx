@@ -209,6 +209,8 @@ const AppointmentList = () => {
           const mm = String(apptDate.getMonth() + 1).padStart(2, "0");
           const dd = String(apptDate.getDate()).padStart(2, "0");
           const apptDateStr = `${yyyy}-${mm}-${dd}`;
+          // Debug log
+          // console.log("Compare:", apptDateStr, values.date, appointment.appointment_date);
           return apptDateStr === values.date;
         });
       }

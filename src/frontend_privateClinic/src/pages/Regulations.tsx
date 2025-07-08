@@ -394,7 +394,8 @@ export default function Regulations() {
                       <div className="flex">
                         <div>
                           <label className="block text-sm text-blue-600 font-semibold mb-1">
-                            Medicine Name
+                            Medicine Name{" "}
+                            <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -410,7 +411,7 @@ export default function Regulations() {
                         <div>
                           {isAddingMedicine && (
                             <label className="block text-sm text-blue-600 font-semibold mb-1">
-                              Quantity
+                              Quantity <span className="text-red-500">*</span>
                             </label>
                           )}
                           {!isAddingMedicine && (
@@ -439,7 +440,7 @@ export default function Regulations() {
                         </div>
                         <div>
                           <label className="block text-sm text-blue-600 font-semibold mb-1">
-                            Price
+                            Price <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -471,7 +472,7 @@ export default function Regulations() {
 
                         <div>
                           <label className="block text-sm text-blue-600 font-semibold mb-1">
-                            Unit
+                            Unit <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <select

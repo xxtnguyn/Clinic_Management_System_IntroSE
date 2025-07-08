@@ -333,13 +333,28 @@ const Report = () => {
                   "Revenue",
                   "Profit Margin",
                 ]}
-                filteredItems={presentList.map((item) => ({
-                  ...item,
-                  date: formatDateForDisplay(item.date),
-                  total_revenue: `${formatNumberWithThousandSeparator(
-                    Number(item.total_revenue)
-                  )} VND`,
-                }))}
+                filteredItems={presentList.map((item) => {
+                  const revenueNum = Number(item.total_revenue);
+                  let profitMarginDisplay = item.profit_margin;
+                  if (revenueNum === 0) {
+                    profitMarginDisplay = "0%";
+                  } else if (
+                    item.profit_margin &&
+                    item.profit_margin !== "None"
+                  ) {
+                    profitMarginDisplay = `${parseFloat(
+                      item.profit_margin
+                    ).toFixed(4)}%`;
+                  }
+                  return {
+                    ...item,
+                    date: formatDateForDisplay(item.date),
+                    total_revenue: `${formatNumberWithThousandSeparator(
+                      revenueNum
+                    )} VND`,
+                    profit_margin: profitMarginDisplay,
+                  };
+                })}
                 attributesOfItem={[
                   "date",
                   "patient_count",

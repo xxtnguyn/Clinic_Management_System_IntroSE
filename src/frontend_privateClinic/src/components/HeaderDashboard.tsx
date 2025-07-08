@@ -23,13 +23,34 @@ interface Props {
   };
 }
 
-export default function HeaderDashboard({ currentUser }: Props) {
+export default function HeaderDashboard({ currentUser: initialUser }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Always get the latest user from localStorage if available
+  const [currentUser, setCurrentUser] = useState(initialUser);
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  // Also update if localStorage changes (e.g. after avatar update)
+  useEffect(() => {
+    const handleStorage = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setCurrentUser(JSON.parse(storedUser));
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   const isDashboard = location.pathname === "/dashboard";
   const role = currentUser.role?.name;
@@ -126,8 +147,8 @@ export default function HeaderDashboard({ currentUser }: Props) {
             >
               <img
                 src={
-                  currentUser.avatar 
-                    ? currentUser.avatar.startsWith('http')
+                  currentUser.avatar
+                    ? currentUser.avatar.startsWith("http")
                       ? currentUser.avatar
                       : `http://localhost:3000${currentUser.avatar}`
                     : `http://localhost:3000/uploads/avatars/${currentUser.role.name.toLowerCase()}-avatar.png`

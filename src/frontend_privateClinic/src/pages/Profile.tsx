@@ -185,6 +185,17 @@ const Profile = () => {
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
 
+      // Update location.state if exists
+      if (location.state) {
+        location.state.user = updatedUser;
+      }
+
+      // Dispatch storage event to update header avatar immediately
+      window.dispatchEvent(new Event("storage"));
+
+      // Force navigation to refresh header (optional, if needed)
+      // navigate("/profile", { state: { user: updatedUser }, replace: true });
+
       setProfileMessage({
         type: "success",
         text: "Cập nhật ảnh đại diện thành công",
