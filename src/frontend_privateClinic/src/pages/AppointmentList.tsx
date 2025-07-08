@@ -217,10 +217,7 @@ const AppointmentList = () => {
       if (values.name && values.name.trim() !== "") {
         const search = values.name.toLowerCase();
         filtered = filtered.filter((appointment) =>
-          appointment.patient_name
-            .toLowerCase()
-            .split(" ")
-            .some((word) => word.startsWith(search))
+          appointment.patient_name.toLowerCase().includes(search)
         );
       }
 
@@ -416,7 +413,7 @@ const AppointmentList = () => {
           onStatusChange={(value) => {
             setSearchValues((prev) => ({ ...prev, status: value }));
           }}
-          onSearch={() => handleSearch(searchValues)}
+          onSearch={() => {}}
           onClear={handleClear}
         />
 
