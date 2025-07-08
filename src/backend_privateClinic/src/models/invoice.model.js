@@ -506,9 +506,9 @@ class Invoice {
     
     const clinicInfo = {
       name: nameResult.rows[0]?.value || 'PHÒNG KHÁM TƯ NHÂN',
-      address: addressResult.rows[0]?.value || '123 Đường Láng, Hà Nội',
-      phone: phoneResult.rows[0]?.value || '0123456789',
-      email: emailResult.rows[0]?.value || 'phongkham@example.com'
+      address: addressResult.rows[0]?.value || '149N Trung Ward, Thu Duc City, Ho Chi Minh City',
+      phone: phoneResult.rows[0]?.value || '0123123123',
+      email: emailResult.rows[0]?.value || 'ndcc.clinic@info.com'
     };
     
     return {
