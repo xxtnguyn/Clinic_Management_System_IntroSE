@@ -9,8 +9,21 @@ import type { CreateMedicineInput } from "../api/medicine.service";
 import axios from "axios";
 import { settingService } from "../api/setting.service";
 import type { Setting } from "../api/setting.service";
+import { diseaseTypeService } from "../api/diseaseType.service";
+import type { DiseaseType } from "../api/diseaseType.service";
+import { appointmentService } from "../api/appointment.service";
+import { usageInstructionService } from "../api/usageInstruction.service";
+import type { UsageInstruction } from "../api/usageInstruction.service";
 import { formatNumberWithThousandSeparator } from "../utils/currencyUtils.ts";
 import { MedicineSearchInput } from "../components/SearchBar";
+// import {
+//   diseaseTypeService,
+//   type DiseaseType,
+// } from "../api/diseaseType.service";
+// import {
+//   usageInstructionService,
+//   type UsageInstruction,
+// } from "../api/usageInstruction.service";
 
 interface Medicine {
   id: number;
@@ -34,6 +47,29 @@ export default function Regulations() {
   const [maxPatientsPerDay, setMaxPatientsPerDay] = useState(0);
   const [maxDiseaseTypes, setMaxDiseaseTypes] = useState(0);
   const [maxMedicines, setMaxMedicines] = useState(0);
+  const [maxUsageInstructions, setMaxUsageInstructions] = useState(0);
+  const [diseaseTypes, setDiseaseTypes] = useState<DiseaseType[]>([]);
+  const [presentDiseaseTypes, setPresentDiseaseTypes] = useState<DiseaseType[]>(
+    []
+  );
+  const [searchDiseaseType, setSearchDiseaseType] = useState("");
+  const [isAddingDiseaseType, setIsAddingDiseaseType] = useState(false);
+  const [isEditingDiseaseType, setIsEditingDiseaseType] = useState(false);
+  const [choosedDiseaseType, setChoosedDiseaseType] =
+    useState<DiseaseType | null>();
+  const [usageInstructions, setUsageInstructions] = useState<
+    UsageInstruction[]
+  >([]);
+  const [presentUsageInstructions, setPresentUsageInstructions] = useState<
+    UsageInstruction[]
+  >([]);
+  const [searchUsageInstruction, setSearchUsageInstruction] = useState("");
+  const [isAddingUsageInstruction, setIsAddingUsageInstruction] =
+    useState(false);
+  const [isEditingUsageInstruction, setIsEditingUsageInstruction] =
+    useState(false);
+  const [choosedUsageInstruction, setChoosedUsageInstruction] =
+    useState<UsageInstruction | null>();
 
   const location = useLocation();
 
@@ -82,6 +118,10 @@ export default function Regulations() {
     setMaxMedicines(Math.max(0, value));
   };
 
+  const handleChangeMaxUsageInstructions = (value: number) => {
+    setMaxUsageInstructions(Math.max(0, value));
+  };
+
   const handleSave = async (new_medicine: Medicine) => {
     try {
       const createMedicineInput: CreateMedicineInput = {
@@ -105,16 +145,111 @@ export default function Regulations() {
   };
 
   const handleSaveOperation = async (settings: Setting[]) => {
-    var res = "";
+    // Validate max_medicines
+    const maxMedicinesSetting = settings.find((s) => s.key === "max_medicines");
+    if (maxMedicinesSetting) {
+      const maxMedicines = parseInt(maxMedicinesSetting.value, 10);
+      const currentMedicinesCount = medicines.length;
+
+      if (maxMedicines < currentMedicinesCount) {
+        alert(
+          `Không thể đặt số lượng thuốc tối đa (${maxMedicines}) nhỏ hơn số lượng thuốc hiện có (${currentMedicinesCount}).`
+        );
+        return;
+      }
+    }
+
+    // Validate max_usage_instructions
+    const maxUsageInstructionsSetting = settings.find(
+      (s) => s.key === "max_usage_instructions"
+    );
+    if (maxUsageInstructionsSetting) {
+      const newMaxUsageInstructions = parseInt(
+        maxUsageInstructionsSetting.value,
+        10
+      );
+      if (newMaxUsageInstructions < 1) {
+        alert("Số lượng hướng dẫn sử dụng tối đa phải lớn hơn 0");
+        return;
+      }
+    }
+
+    // Validate max_disease_types
+    const maxDiseaseTypesSetting = settings.find(
+      (s) => s.key === "max_disease_types"
+    );
+    if (maxDiseaseTypesSetting) {
+      const maxDiseaseTypes = parseInt(maxDiseaseTypesSetting.value, 10);
+      try {
+        const diseaseTypes = await diseaseTypeService.getDiseaseTypes();
+        const currentDiseaseTypesCount = diseaseTypes.length;
+
+        if (maxDiseaseTypes < currentDiseaseTypesCount) {
+          alert(
+            `Không thể đặt số loại bệnh tối đa (${maxDiseaseTypes}) nhỏ hơn số loại bệnh hiện có (${currentDiseaseTypesCount}).`
+          );
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching disease types:", error);
+      }
+    }
+
+    // Validate max_patients_per_day
+    const maxPatientsSetting = settings.find(
+      (s) => s.key === "max_patients_per_day"
+    );
+    if (maxPatientsSetting) {
+      const maxPatients = parseInt(maxPatientsSetting.value, 10);
+      const today = new Date().toISOString().split("T")[0];
+      try {
+        const appointments = await appointmentService.getAppointments(today);
+        const currentAppointmentsCount = appointments.length;
+
+        if (maxPatients < currentAppointmentsCount) {
+          alert(
+            `Không thể đặt số bệnh nhân tối đa mỗi ngày (${maxPatients}) nhỏ hơn số bệnh nhân đã đặt lịch hôm nay (${currentAppointmentsCount}).`
+          );
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+      }
+    }
+
+    // Validate max_usage_instructions
+    const usageInstructionsSetting = settings.find(
+      (s) => s.key === "max_usage_instructions"
+    );
+    if (usageInstructionsSetting) {
+      const maxUsageInstructions = parseInt(usageInstructionsSetting.value, 10);
+      try {
+        // Fetch current usage instructions count from the server
+        const usageInstructions =
+          await usageInstructionService.getUsageInstructions();
+        const currentUsageInstructionsCount = usageInstructions.length;
+
+        if (maxUsageInstructions < currentUsageInstructionsCount) {
+          alert(
+            `Không thể đặt số hướng dẫn sử dụng tối đa (${maxUsageInstructions}) nhỏ hơn số hướng dẫn sử dụng hiện có (${currentUsageInstructionsCount}).`
+          );
+          return;
+        }
+      } catch (error) {
+        console.error("Error fetching usage instructions:", error);
+      }
+    }
+
+    let res = "";
     for (const setting of settings) {
       try {
         await settingService.updateByKey(setting);
-        res = "Cập nhật thành công ";
+        res = "Cập nhật thành công";
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const message =
             error.response?.data?.message || "Đã xảy ra lỗi khi update";
-          res += message + "\n"; // hoặc toast(message)
+          res += message + "\n";
         } else {
           res += "Lỗi không xác định" + "\n";
         }
@@ -255,8 +390,76 @@ export default function Regulations() {
       setMaxMedicines(maxMedicines);
     };
 
+    const fetchMaxUsageInstructions = async () => {
+      const maxUsageInstructions = await settingService.getValueByKey(
+        "max_usage_instructions"
+      );
+      setMaxUsageInstructions(maxUsageInstructions);
+    };
+
     fetchMaxMedicines();
+    fetchMaxUsageInstructions();
   }, [activeTab]);
+
+  useEffect(() => {
+    const fetchMaxUsageInstructions = async () => {
+      const maxUsageInstructions = await settingService.getValueByKey(
+        "max_usage_instructions"
+      );
+      setMaxUsageInstructions(maxUsageInstructions);
+    };
+    fetchMaxUsageInstructions();
+  }, [activeTab]);
+
+  useEffect(() => {
+    const fetchDiseaseTypes = async () => {
+      const types = await diseaseTypeService.getDiseaseTypes();
+      setDiseaseTypes(types);
+    };
+    fetchDiseaseTypes();
+  }, [fetch, activeTab]);
+
+  useEffect(() => {
+    setPresentDiseaseTypes(diseaseTypes);
+  }, [diseaseTypes]);
+
+  useEffect(() => {
+    if (searchDiseaseType.trim() === "") {
+      setPresentDiseaseTypes(diseaseTypes);
+    } else {
+      setPresentDiseaseTypes(
+        diseaseTypes.filter((item) =>
+          item.name.toLowerCase().includes(searchDiseaseType.toLowerCase())
+        )
+      );
+    }
+  }, [searchDiseaseType, diseaseTypes]);
+
+  useEffect(() => {
+    const fetchUsageInstructions = async () => {
+      const instructions = await usageInstructionService.getUsageInstructions();
+      setUsageInstructions(instructions);
+    };
+    fetchUsageInstructions();
+  }, [fetch, activeTab]);
+
+  useEffect(() => {
+    setPresentUsageInstructions(usageInstructions);
+  }, [usageInstructions]);
+
+  useEffect(() => {
+    if (searchUsageInstruction.trim() === "") {
+      setPresentUsageInstructions(usageInstructions);
+    } else {
+      setPresentUsageInstructions(
+        usageInstructions.filter((item) =>
+          item.instruction
+            .toLowerCase()
+            .includes(searchUsageInstruction.toLowerCase())
+        )
+      );
+    }
+  }, [searchUsageInstruction, usageInstructions]);
 
   useEffect(() => {
     // Search động theo tên thuốc
@@ -271,6 +474,107 @@ export default function Regulations() {
     }
   }, [searchTerm, medicines]);
 
+  // Disease Type handlers
+  const handleChooseDiseaseType = (id: number) => {
+    if (!isEditingDiseaseType) return;
+    for (let i = 0; i < presentDiseaseTypes.length; i++) {
+      if (presentDiseaseTypes[i].id === id) {
+        setChoosedDiseaseType({ ...presentDiseaseTypes[i] });
+        break;
+      }
+    }
+  };
+  const handleChangeDiseaseTypeAttr = (attr: keyof DiseaseType, value: any) => {
+    if (!choosedDiseaseType) return;
+    setChoosedDiseaseType({ ...choosedDiseaseType, [attr]: value });
+  };
+  const handleSaveDiseaseType = async (
+    diseaseType: Omit<DiseaseType, "id">
+  ) => {
+    try {
+      await diseaseTypeService.createDiseaseType(diseaseType);
+      alert("Tạo loại bệnh thành công");
+      setFetch(fetch + 1);
+      setIsAddingDiseaseType(false);
+      setChoosedDiseaseType(null);
+    } catch (error: any) {
+      alert(error.message || "Đã xảy ra lỗi khi tạo loại bệnh");
+    }
+  };
+  const handleUpdateDiseaseType = async (diseaseType: DiseaseType) => {
+    try {
+      await diseaseTypeService.updateDiseaseType(diseaseType.id, diseaseType);
+      alert("Cập nhật loại bệnh thành công");
+      setFetch(fetch + 1);
+    } catch (error: any) {
+      alert(error.message || "Đã xảy ra lỗi khi cập nhật loại bệnh");
+    }
+  };
+  const handleDeleteDiseaseType = async (id: number) => {
+    try {
+      await diseaseTypeService.deleteDiseaseType(id);
+      alert("Xóa loại bệnh thành công");
+      setFetch(fetch + 1);
+      setChoosedDiseaseType(null);
+    } catch (error: any) {
+      alert(error.message || "Đã xảy ra lỗi khi xóa loại bệnh");
+    }
+  };
+  // Usage Instruction handlers
+  const handleChooseUsageInstruction = (id: number) => {
+    if (!isEditingUsageInstruction) return;
+    for (let i = 0; i < presentUsageInstructions.length; i++) {
+      if (presentUsageInstructions[i].id === id) {
+        setChoosedUsageInstruction({ ...presentUsageInstructions[i] });
+        break;
+      }
+    }
+  };
+  const handleChangeUsageInstructionAttr = (
+    attr: keyof UsageInstruction,
+    value: any
+  ) => {
+    if (!choosedUsageInstruction) return;
+    setChoosedUsageInstruction({ ...choosedUsageInstruction, [attr]: value });
+  };
+  const handleSaveUsageInstruction = async (
+    usageInstruction: Omit<UsageInstruction, "id">
+  ) => {
+    try {
+      await usageInstructionService.createUsageInstruction(usageInstruction);
+      alert("Tạo cách dùng thành công");
+      setFetch(fetch + 1);
+      setIsAddingUsageInstruction(false);
+      setChoosedUsageInstruction(null);
+    } catch (error: any) {
+      alert(error.message || "Đã xảy ra lỗi khi tạo cách dùng");
+    }
+  };
+  const handleUpdateUsageInstruction = async (
+    usageInstruction: UsageInstruction
+  ) => {
+    try {
+      await usageInstructionService.updateUsageInstruction(
+        usageInstruction.id,
+        usageInstruction
+      );
+      alert("Cập nhật cách dùng thành công");
+      setFetch(fetch + 1);
+    } catch (error: any) {
+      alert(error.message || "Đã xảy ra lỗi khi cập nhật cách dùng");
+    }
+  };
+  const handleDeleteUsageInstruction = async (id: number) => {
+    try {
+      await usageInstructionService.deleteUsageInstruction(id);
+      alert("Xóa cách dùng thành công");
+      setFetch(fetch + 1);
+      setChoosedUsageInstruction(null);
+    } catch (error: any) {
+      alert(error.message || "Đã xảy ra lỗi khi xóa cách dùng");
+    }
+  };
+
   return (
     <div className="min-h-screen w-full">
       <HeaderDashboard currentUser={user} />
@@ -282,7 +586,12 @@ export default function Regulations() {
           <TabHeaders
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            headers={["OPERATION", "MEDICINE"]}
+            headers={[
+              "OPERATION",
+              "MEDICINE",
+              "DISEASE TYPE",
+              "MEDICINE USAGE",
+            ]}
           />
           <BlueUnderline />
           <div className="p-6 bg-gray-50 min-h-96">
@@ -394,8 +703,7 @@ export default function Regulations() {
                       <div className="flex">
                         <div>
                           <label className="block text-sm text-blue-600 font-semibold mb-1">
-                            Medicine Name{" "}
-                            <span className="text-red-500">*</span>
+                            Medicine Name
                           </label>
                           <input
                             type="text"
@@ -411,7 +719,7 @@ export default function Regulations() {
                         <div>
                           {isAddingMedicine && (
                             <label className="block text-sm text-blue-600 font-semibold mb-1">
-                              Quantity <span className="text-red-500">*</span>
+                              Quantity
                             </label>
                           )}
                           {!isAddingMedicine && (
@@ -440,7 +748,7 @@ export default function Regulations() {
                         </div>
                         <div>
                           <label className="block text-sm text-blue-600 font-semibold mb-1">
-                            Price <span className="text-red-500">*</span>
+                            Price
                           </label>
                           <input
                             type="text"
@@ -472,7 +780,7 @@ export default function Regulations() {
 
                         <div>
                           <label className="block text-sm text-blue-600 font-semibold mb-1">
-                            Unit <span className="text-red-500">*</span>
+                            Unit
                           </label>
                           <div className="relative">
                             <select
@@ -539,7 +847,7 @@ export default function Regulations() {
                               }
                             }}
                           >
-                            Save
+                            Create
                           </button>
                         )}
                         {!isAddingMedicine && isEditingMedicine && (
@@ -575,123 +883,484 @@ export default function Regulations() {
               </>
             )}
             {activeTab === "OPERATION" && (
+              <div className="p-8 bg-white w-full max-w-5xl mx-auto">
+                <h2 className="text-2xl font-bold text-blue-600 mb-8">
+                  Clinic's Operation
+                </h2>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-600 mb-1">
+                      Examination fee
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. 100,000"
+                      value={formatNumberWithThousandSeparator(examinationFee)}
+                      onChange={(e) => {
+                        // Remove commas and convert to number
+                        const numericValue = e.target.value.replace(/,/g, "");
+                        handleChangeExaminationFee(
+                          !isNaN(Number(numericValue))
+                            ? Number(numericValue)
+                            : 0
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-blue-600 mb-1">
+                      Maximum patients / day
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-inner-spin-button]:h-8 [&::-webkit-outer-spin-button]:h-8 [&::-webkit-inner-spin-button]:w-8 [&::-webkit-outer-spin-button]:w-8"
+                      // placeholder="e.g. 100"
+                      value={maxPatientsPerDay}
+                      onChange={(e) => {
+                        handleChangeMaxPatientsPerDay(
+                          !isNaN(Number(e.target.value))
+                            ? Number(e.target.value)
+                            : 0
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-600 mb-1">
+                      Maximum disease types
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-inner-spin-button]:h-8 [&::-webkit-outer-spin-button]:h-8 [&::-webkit-inner-spin-button]:w-8 [&::-webkit-outer-spin-button]:w-8"
+                      placeholder="e.g. 100"
+                      value={maxDiseaseTypes}
+                      onChange={(e) => {
+                        handleChangeMaxDiseaseTypes(
+                          !isNaN(Number(e.target.value))
+                            ? Number(e.target.value)
+                            : 0
+                        );
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-blue-600 mb-1">
+                      Maximum medicines
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={maxMedicines}
+                      onChange={(e) =>
+                        handleChangeMaxMedicines(Number(e.target.value))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-600 mb-1">
+                      Maximum usage instructions
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={maxUsageInstructions}
+                      onChange={(e) =>
+                        setMaxUsageInstructions(Number(e.target.value))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <button
+                  className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 font-semibold mt-4"
+                  onClick={() =>
+                    handleSaveOperation([
+                      {
+                        key: "examination_fee",
+                        value: examinationFee.toString(),
+                      },
+                      {
+                        key: "max_patients_per_day",
+                        value: maxPatientsPerDay.toString(),
+                      },
+                      {
+                        key: "max_disease_types",
+                        value: maxDiseaseTypes.toString(),
+                      },
+                      { key: "max_medicines", value: maxMedicines.toString() },
+                      {
+                        key: "max_usage_instructions",
+                        value: maxUsageInstructions.toString(),
+                      },
+                    ])
+                  }
+                >
+                  Save
+                </button>
+              </div>
+            )}
+            {activeTab === "DISEASE TYPE" && (
               <>
-                <div className="p-8 bg-white w-full max-w-5xl mx-auto">
-                  <h2 className="text-2xl font-bold text-blue-600 mb-8">
-                    Clinic's Operation
-                  </h2>
-
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-blue-600 mb-1">
-                        Examination fee
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g. 100,000"
-                        value={formatNumberWithThousandSeparator(
-                          examinationFee
-                        )}
-                        onChange={(e) => {
-                          // Remove commas and convert to number
-                          const numericValue = e.target.value.replace(/,/g, "");
-                          handleChangeExaminationFee(
-                            !isNaN(Number(numericValue))
-                              ? Number(numericValue)
-                              : 0
-                          );
-                        }}
+                <div className="mb-6 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-1 max-w-md">
+                      <MedicineSearchInput
+                        value={searchDiseaseType}
+                        onChange={setSearchDiseaseType}
+                        placeholder="Search by disease type name..."
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-blue-600 mb-1">
-                        Maximum patients / day
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-inner-spin-button]:h-8 [&::-webkit-outer-spin-button]:h-8 [&::-webkit-inner-spin-button]:w-8 [&::-webkit-outer-spin-button]:w-8"
-                        placeholder="e.g. 100"
-                        value={maxPatientsPerDay}
-                        onChange={(e) => {
-                          handleChangeMaxPatientsPerDay(
-                            !isNaN(Number(e.target.value))
-                              ? Number(e.target.value)
-                              : 0
-                          );
-                        }}
-                      />
-                    </div>
+                    <button
+                      onClick={() => setSearchDiseaseType("")}
+                      className="px-4 py-2 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-100 transition-colors font-medium"
+                    >
+                      Clear
+                    </button>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-blue-600 mb-1">
-                        Maximum disease types
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-inner-spin-button]:h-8 [&::-webkit-outer-spin-button]:h-8 [&::-webkit-inner-spin-button]:w-8 [&::-webkit-outer-spin-button]:w-8"
-                        placeholder="e.g. 100"
-                        value={maxDiseaseTypes}
-                        onChange={(e) => {
-                          handleChangeMaxDiseaseTypes(
-                            !isNaN(Number(e.target.value))
-                              ? Number(e.target.value)
-                              : 0
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-blue-600 mb-1">
-                        Maximum medicines
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-inner-spin-button]:h-8 [&::-webkit-outer-spin-button]:h-8 [&::-webkit-inner-spin-button]:w-8 [&::-webkit-outer-spin-button]:w-8"
-                        placeholder="e.g. 100"
-                        value={maxMedicines}
-                        onChange={(e) => {
-                          handleChangeMaxMedicines(
-                            !isNaN(Number(e.target.value))
-                              ? Number(e.target.value)
-                              : 0
-                          );
-                        }}
-                      />
-                    </div>
-                  </div>
-
+                </div>
+                <Table
+                  headers={["ID", "Name", "Description"]}
+                  filteredItems={presentDiseaseTypes}
+                  attributesOfItem={["id", "name", "description"]}
+                  weights={["w-[100px]", "w-[200px]", "w-[400px]"]}
+                  handleChoose={handleChooseDiseaseType}
+                  selectedItemId={choosedDiseaseType?.id || null}
+                  isEditing={isEditingDiseaseType}
+                />
+                <div className="flex justify-between items-center mt-6">
                   <button
-                    className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl px-6 py-2"
                     onClick={() => {
-                      const settings: Setting[] = [
-                        {
-                          key: "examination_fee",
-                          value: String(examinationFee),
-                        },
-                        {
-                          key: "max_patients_per_day",
-                          value: String(maxPatientsPerDay),
-                        },
-                        {
-                          key: "max_disease_types",
-                          value: String(maxDiseaseTypes),
-                        },
-                        { key: "max_medicines", value: String(maxMedicines) },
-                      ];
-                      handleSaveOperation(settings);
+                      setIsAddingDiseaseType(!isAddingDiseaseType);
+                      setChoosedDiseaseType(
+                        isAddingDiseaseType
+                          ? null
+                          : { id: 0, name: "", description: "" }
+                      );
                     }}
+                    className={`px-6 py-2 rounded-md transition-colors font-medium ${
+                      isAddingDiseaseType
+                        ? "bg-gray-500 text-white hover:bg-gray-700"
+                        : "bg-blue-500 text-white hover:bg-blue-700"
+                    }`}
                   >
-                    Save
+                    {isAddingDiseaseType
+                      ? "Cancel Creating"
+                      : "Add Disease Type"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingDiseaseType(!isEditingDiseaseType);
+                      if (!isEditingDiseaseType) {
+                        setChoosedDiseaseType(null);
+                        setIsAddingDiseaseType(false);
+                      }
+                    }}
+                    className={`px-6 py-2 rounded-md transition-colors font-medium ${
+                      isEditingDiseaseType
+                        ? "bg-gray-500 text-white hover:bg-gray-700"
+                        : "bg-[#1250B1] text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {isEditingDiseaseType ? "Cancel Editing" : "Edit"}
                   </button>
                 </div>
+                {(choosedDiseaseType || isAddingDiseaseType) && (
+                  <div className="max-w-full mx-auto bg-white p-6 rounded shadow mt-10">
+                    <h2 className="text-xl font-bold text-blue-600 mb-1">
+                      {isAddingDiseaseType
+                        ? "Add New Disease Type"
+                        : choosedDiseaseType?.name}
+                    </h2>
+                    <p className="text-sm text-blue-400 mb-4">
+                      {!isAddingDiseaseType && choosedDiseaseType?.id && (
+                        <>ID. {choosedDiseaseType.id}</>
+                      )}
+                    </p>
+                    <form className="space-y-4">
+                      <div>
+                        <label className="block text-sm text-blue-600 font-semibold mb-1">
+                          Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={
+                            choosedDiseaseType ? choosedDiseaseType.name : ""
+                          }
+                          placeholder="Type here..."
+                          className="w-2/3 border border-blue-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
+                          onChange={(e) =>
+                            handleChangeDiseaseTypeAttr("name", e.target.value)
+                          }
+                          disabled={
+                            !isAddingDiseaseType && !isEditingDiseaseType
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-blue-600 font-semibold mb-1">
+                          Description
+                        </label>
+                        <input
+                          type="text"
+                          value={
+                            choosedDiseaseType
+                              ? choosedDiseaseType.description
+                              : ""
+                          }
+                          placeholder="Type here..."
+                          className="w-full border border-blue-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                          onChange={(e) =>
+                            handleChangeDiseaseTypeAttr(
+                              "description",
+                              e.target.value
+                            )
+                          }
+                          disabled={
+                            !isAddingDiseaseType && !isEditingDiseaseType
+                          }
+                        />
+                      </div>
+                      <div className="flex justify-start gap-4 pt-2">
+                        {isAddingDiseaseType && (
+                          <button
+                            type="button"
+                            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 font-semibold w-1/10 text-center"
+                            onClick={() => {
+                              if (choosedDiseaseType) {
+                                handleSaveDiseaseType({
+                                  name: choosedDiseaseType.name,
+                                  description: choosedDiseaseType.description,
+                                });
+                              }
+                            }}
+                          >
+                            Create
+                          </button>
+                        )}
+                        {!isAddingDiseaseType && isEditingDiseaseType && (
+                          <button
+                            type="button"
+                            className="bg-[#1250B1] text-white border border-blue-700 px-6 py-2 rounded hover:bg-blue-600 font-semibold w-1/10 text-center"
+                            onClick={() => {
+                              if (choosedDiseaseType)
+                                handleUpdateDiseaseType(choosedDiseaseType);
+                            }}
+                          >
+                            Save
+                          </button>
+                        )}
+                        {!isAddingDiseaseType && isEditingDiseaseType && (
+                          <button
+                            type="button"
+                            className="bg-white text-red-500 border border-red-500 px-6 py-2 rounded hover:bg-red-200 font-semibold w-1/10 text-center"
+                            onClick={() => {
+                              if (choosedDiseaseType)
+                                handleDeleteDiseaseType(choosedDiseaseType.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </>
+            )}
+            {activeTab === "MEDICINE USAGE" && (
+              <>
+                <div className="mb-6 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-1 max-w-md">
+                      <MedicineSearchInput
+                        value={searchUsageInstruction}
+                        onChange={setSearchUsageInstruction}
+                        placeholder="Search by usage instruction..."
+                      />
+                    </div>
+                    <button
+                      onClick={() => setSearchUsageInstruction("")}
+                      className="px-4 py-2 border border-gray-300 text-gray-600 rounded-md hover:bg-gray-100 transition-colors font-medium"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <Table
+                  headers={["ID", "Instruction", "Description"]}
+                  filteredItems={presentUsageInstructions}
+                  attributesOfItem={["id", "instruction", "description"]}
+                  weights={["w-[100px]", "w-[400px]", "w-[400px]"]}
+                  handleChoose={handleChooseUsageInstruction}
+                  selectedItemId={choosedUsageInstruction?.id || null}
+                  isEditing={isEditingUsageInstruction}
+                />
+                <div className="flex justify-between items-center mt-6">
+                  <button
+                    onClick={() => {
+                      setIsAddingUsageInstruction(!isAddingUsageInstruction);
+                      setChoosedUsageInstruction(
+                        isAddingUsageInstruction
+                          ? null
+                          : { id: 0, instruction: "", description: "" }
+                      );
+                    }}
+                    className={`px-6 py-2 rounded-md transition-colors font-medium ${
+                      isAddingUsageInstruction
+                        ? "bg-gray-500 text-white hover:bg-gray-700"
+                        : "bg-blue-500 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {isAddingUsageInstruction
+                      ? "Cancel Creating"
+                      : "Add Usage Instruction"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingUsageInstruction(!isEditingUsageInstruction);
+                      if (!isEditingUsageInstruction) {
+                        setChoosedUsageInstruction(null);
+                        setIsAddingUsageInstruction(false);
+                      }
+                    }}
+                    className={`px-6 py-2 rounded-md transition-colors font-medium ${
+                      isEditingUsageInstruction
+                        ? "bg-gray-500 text-white hover:bg-gray-700"
+                        : "bg-[#1250B1] text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {isEditingUsageInstruction ? "Cancel Editing" : "Edit"}
+                  </button>
+                </div>
+                {(choosedUsageInstruction || isAddingUsageInstruction) && (
+                  <div className="max-w-full mx-auto bg-white p-6 rounded shadow mt-10">
+                    <h2 className="text-xl font-bold text-blue-600 mb-1">
+                      {isAddingUsageInstruction
+                        ? "Add New Usage Instruction"
+                        : choosedUsageInstruction?.instruction}
+                    </h2>
+                    <p className="text-sm text-blue-400 mb-4">
+                      {!isAddingUsageInstruction &&
+                        choosedUsageInstruction?.id && (
+                          <>ID. {choosedUsageInstruction.id}</>
+                        )}
+                    </p>
+                    <form className="space-y-4">
+                      <div>
+                        <label className="block text-sm text-blue-600 font-semibold mb-1">
+                          Instruction <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={
+                            choosedUsageInstruction
+                              ? choosedUsageInstruction.instruction
+                              : ""
+                          }
+                          placeholder="Type here..."
+                          className="w-2/3 border border-blue-300 rounded-full px-3 py-2 text-black placeholder-gray-400"
+                          onChange={(e) =>
+                            handleChangeUsageInstructionAttr(
+                              "instruction",
+                              e.target.value
+                            )
+                          }
+                          disabled={
+                            !isAddingUsageInstruction &&
+                            !isEditingUsageInstruction
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-blue-600 font-semibold mb-1">
+                          Description
+                        </label>
+                        <input
+                          type="text"
+                          value={
+                            choosedUsageInstruction
+                              ? choosedUsageInstruction.description
+                              : ""
+                          }
+                          placeholder="Type here..."
+                          className="w-full border border-blue-300 rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+                          onChange={(e) =>
+                            handleChangeUsageInstructionAttr(
+                              "description",
+                              e.target.value
+                            )
+                          }
+                          disabled={
+                            !isAddingUsageInstruction &&
+                            !isEditingUsageInstruction
+                          }
+                        />
+                      </div>
+                      <div className="flex justify-start gap-4 pt-2">
+                        {isAddingUsageInstruction && (
+                          <button
+                            type="button"
+                            className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 font-semibold w-1/10 text-center"
+                            onClick={() => {
+                              if (choosedUsageInstruction) {
+                                handleSaveUsageInstruction({
+                                  instruction:
+                                    choosedUsageInstruction.instruction,
+                                  description:
+                                    choosedUsageInstruction.description,
+                                });
+                              }
+                            }}
+                          >
+                            Create
+                          </button>
+                        )}
+                        {!isAddingUsageInstruction &&
+                          isEditingUsageInstruction && (
+                            <button
+                              type="button"
+                              className="bg-[#1250B1] text-white border border-blue-700 px-6 py-2 rounded hover:bg-blue-600 font-semibold w-1/10 text-center"
+                              onClick={() => {
+                                if (choosedUsageInstruction)
+                                  handleUpdateUsageInstruction(
+                                    choosedUsageInstruction
+                                  );
+                              }}
+                            >
+                              Save
+                            </button>
+                          )}
+                        {!isAddingUsageInstruction &&
+                          isEditingUsageInstruction && (
+                            <button
+                              type="button"
+                              className="bg-white text-red-500 border border-red-500 px-6 py-2 rounded hover:bg-red-200 font-semibold w-1/10 text-center"
+                              onClick={() => {
+                                if (choosedUsageInstruction)
+                                  handleDeleteUsageInstruction(
+                                    choosedUsageInstruction.id
+                                  );
+                              }}
+                            >
+                              Delete
+                            </button>
+                          )}
+                      </div>
+                    </form>
+                  </div>
+                )}
               </>
             )}
           </div>
