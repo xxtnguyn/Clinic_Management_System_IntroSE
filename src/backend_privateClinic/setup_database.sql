@@ -294,11 +294,7 @@ CREATE TABLE permissions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-<<<<<<< HEAD
 -- Tạo lại bảng với các trường mới
-=======
--- Tạo các bảng có khóa ngoại
->>>>>>> Invoice1
 CREATE TABLE staff (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -307,12 +303,9 @@ CREATE TABLE staff (
     email VARCHAR(100) UNIQUE,
     phone VARCHAR(20),
     address TEXT,
-<<<<<<< HEAD
     gender VARCHAR(10) CHECK (gender IN ('Nam', 'Nữ', 'Khác')),
     avatar VARCHAR(255),
     birth_date DATE,
-=======
->>>>>>> Invoice1
     role_id INTEGER REFERENCES roles(id) ON DELETE RESTRICT,
     is_active BOOLEAN DEFAULT true,
     last_login TIMESTAMP,
@@ -567,24 +560,35 @@ ALTER TABLE medicines ADD CONSTRAINT check_unit CHECK (unit IN ('viên', 'chai')
 
 -- Chèn dữ liệu vào bảng settings (đã có trong cấu trúc, giữ nguyên)
 INSERT INTO settings (key, value, description) VALUES
-    ('max_patients_per_day', '12', 'Số bệnh nhân tối đa mỗi ngày'),
+    ('max_patients_per_day', '40', 'Số bệnh nhân tối đa mỗi ngày'),
     ('max_disease_types', '5', 'Số loại bệnh tối đa'),
     ('max_medicines', '30', 'Số loại thuốc tối đa'),
     ('max_usage_instructions', '4', 'Số cách dùng tối đa'),
     ('examination_fee', '30000', 'Phí khám mặc định');
 
--- Chèn dữ liệu vào bảng patients (10 bệnh nhân mẫu)
 INSERT INTO patients (full_name, gender, birth_year, phone, address) VALUES
-    ('Nguyễn Văn An', 'Nam', 1990, '0901234567', '123 Đường Láng, Hà Nội'),
-    ('Trần Thị Bình', 'Nữ', 1985, '0912345678', '45 Nguyễn Huệ, TP.HCM'),
-    ('Lê Văn Cường', 'Nam', 1995, '0923456789', '78 Lê Lợi, Đà Nẵng'),
-    ('Phạm Thị Duyên', 'Nữ', 2000, '0934567890', '12 Trần Phú, Nha Trang'),
-    ('Hoàng Văn Em', 'Nam', 1980, '0945678901', '56 Hùng Vương, Huế'),
-    ('Vũ Thị Fương', 'Nữ', 1992, '0956789012', '89 Phạm Văn Đồng, Hà Nội'),
-    ('Đặng Văn Giang', 'Nam', 1988, '0967890123', '34 Nguyễn Trãi, TP.HCM'),
-    ('Bùi Thị Hà', 'Nữ', 1997, '0978901234', '67 Lê Đại Hành, Đà Nẵng'),
-    ('Ngô Văn Hùng', 'Nam', 1983, '0989012345', '23 Lý Thường Kiệt, Nha Trang'),
-    ('Mai Thị In', 'Nữ', 1994, '0990123456', '45 Nguyễn Văn Cừ, Huế');
+('Nguyễn Văn An', 'Nam', 1990, '0912345678', '12 Nguyễn Huệ, Quận 1, TP.HCM'),
+('Trần Thị Bình', 'Nữ', 1985, '0987654321', '45 Lê Lợi, Quận 1, TP.HCM'),
+('Lê Văn Cường', 'Nam', 1992, '0931122334', '78 Hai Bà Trưng, Quận 3, TP.HCM'),
+('Phạm Thị Duyên', 'Nữ', 1998, '0944112233', '23 Nguyễn Trãi, Quận 5, TP.HCM'),
+('Hoàng Văn Em', 'Nam', 1983, '0909988776', '56 Cách Mạng Tháng 8, Quận 10, TP.HCM'),
+('Vũ Thị Phương', 'Nữ', 1994, '0966554433', '89 Điện Biên Phủ, Quận Bình Thạnh, TP.HCM'),
+('Đặng Văn Giang', 'Nam', 1987, '0977889900', '34 Võ Thị Sáu, Quận 3, TP.HCM'),
+('Bùi Thị Hà', 'Nữ', 1996, '0922334455', '67 Trường Chinh, Quận Tân Bình, TP.HCM'),
+('Ngô Văn Hùng', 'Nam', 1981, '0933445566', '23 Lý Thường Kiệt, Quận Tân Phú, TP.HCM'),
+('Mai Thị In', 'Nữ', 1995, '0911998877', '45 Nguyễn Văn Cừ, Quận 5, TP.HCM'),
+('Phạm Văn Khoa', 'Nam', 1993, '0977112233', '123 Nguyễn Kiệm, Quận Phú Nhuận, TP.HCM'),
+('Trần Thị Liên', 'Nữ', 1989, '0903111222', '90 Hoàng Văn Thụ, Quận Tân Bình, TP.HCM'),
+('Lê Thị Thanh', 'Nữ', 2000, '0955667788', '15 Bạch Đằng, Quận Bình Thạnh, TP.HCM'),
+('Nguyễn Văn Dũng', 'Nam', 1984, '0938776655', '36 Pasteur, Quận 1, TP.HCM'),
+('Đỗ Thị Hằng', 'Nữ', 1991, '0966778899', '81 Phan Xích Long, Quận Phú Nhuận, TP.HCM'),
+('Trịnh Văn Sơn', 'Nam', 1986, '0944221133', '62 Nguyễn Oanh, Quận Gò Vấp, TP.HCM'),
+('Đoàn Thị Hoa', 'Nữ', 1997, '0988112233', '11 Dương Bá Trạc, Quận 8, TP.HCM'),
+('Nguyễn Hữu Tài', 'Nam', 1990, '0911888776', '19 Tô Hiến Thành, Quận 10, TP.HCM'),
+('Võ Thị Mai', 'Nữ', 1982, '0922557799', '75 Huỳnh Tấn Phát, Quận 7, TP.HCM'),
+('Trần Minh Quân', 'Nam', 1999, '0908776655', '22 Trần Hưng Đạo, Quận 1, TP.HCM');
+
+
 
 -- Chèn dữ liệu vào bảng disease_types (5 loại bệnh - đúng giới hạn tối đa)
 INSERT INTO disease_types (name, description) VALUES
@@ -710,7 +714,6 @@ INSERT INTO permissions (name, description) VALUES
     ('delete_setting', 'Xóa cài đặt hệ thống');
 
 -- Chèn dữ liệu vào bảng staff (3 nhân viên mẫu: 1 admin, 1 bác sĩ, 1 tiếp tân)
-<<<<<<< HEAD
 -- Chèn dữ liệu vào bảng staff (3 nhân viên mẫu: 1 admin, 1 bác sĩ, 1 tiếp tân)
 -- Sử dụng mật khẩu đã được hash (mật khẩu gốc: 123456)
 INSERT INTO staff (
@@ -727,7 +730,7 @@ INSERT INTO staff (
     is_active
 ) VALUES
     ('admin01', 
-     '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 
+     '$2b$10$lQv9aMM3Lm/9/8ZMXqLmWeYgDQcFxQf/GPiyNNmddQOHmyITunIK6', 
      'Nguyễn Admin', 
      'admin@clinic.com', 
      '0901112233', 
@@ -739,7 +742,7 @@ INSERT INTO staff (
      true),
      
     ('doctor01', 
-     '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 
+     '$2b$10$lQv9aMM3Lm/9/8ZMXqLmWeYgDQcFxQf/GPiyNNmddQOHmyITunIK6', 
      'Trần Bác Sĩ', 
      'doctor@clinic.com', 
      '0902223344', 
@@ -751,7 +754,7 @@ INSERT INTO staff (
      true),
      
     ('receptionist01', 
-     '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 
+     '$2b$10$lQv9aMM3Lm/9/8ZMXqLmWeYgDQcFxQf/GPiyNNmddQOHmyITunIK6', 
      'Lê Thị Tiếp Tân', 
      'receptionist@clinic.com', 
      '0903334455', 
@@ -761,13 +764,6 @@ INSERT INTO staff (
      '1995-11-30', 
      3, 
      true);
-=======
--- Sử dụng mật khẩu plain text để dễ test
-INSERT INTO staff (username, password, full_name, email, phone, address, role_id, is_active) VALUES
-    ('admin01', '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 'Nguyễn Admin', 'admin@clinic.com', '0901112233', '123 Đường Láng, Hà Nội', 1, true),
-    ('doctor01', '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 'Trần Bác Sĩ', 'doctor@clinic.com', '0902223344', '45 Nguyễn Huệ, TP.HCM', 2, true),
-    ('receptionist01', '$2b$10$2GpZtMBPwAgi1n.od4bFR.HFogpKkNH9Pg5.8ngbBfg/LuRQDTGIq', 'Lê Tiếp Tân', 'receptionist@clinic.com', '0903334455', '78 Lê Lợi, Đà Nẵng', 3, true);
->>>>>>> Invoice1
 
 -- Phân quyền cho vai trò admin - có tất cả quyền
 INSERT INTO role_permissions (role_id, permission_id)
@@ -834,47 +830,95 @@ SELECT 3, id FROM permissions WHERE name IN (
     'view_settings'
 );
 
--- Chèn dữ liệu vào bảng appointment_lists (40 bệnh nhân cho ngày 2025-04-20 - đúng giới hạn tối đa)
+-- Ngày 07/07/2025 - hoàn thành
 INSERT INTO appointment_lists (patient_id, appointment_date, appointment_time, order_number, status, notes) VALUES
-    (1, '2025-04-20', '08:00:00', 1, 'waiting', 'Khám cảm cúm'),
-    (2, '2025-04-20', '08:15:00', 2, 'waiting', 'Khám viêm họng'),
-    (3, '2025-04-20', '08:30:00', 3, 'waiting', 'Khám tiêu chảy'),
-    (4, '2025-04-20', '08:45:00', 4, 'waiting', 'Khám đau đầu'),
-    (5, '2025-04-20', '09:00:00', 5, 'waiting', 'Khám viêm da'),
-    (6, '2025-04-20', '09:15:00', 6, 'waiting', 'Khám cảm cúm'),
-    (7, '2025-04-20', '09:30:00', 7, 'waiting', 'Khám viêm họng'),
-    (8, '2025-04-20', '09:45:00', 8, 'waiting', 'Khám tiêu chảy'),
-    (9, '2025-04-20', '10:00:00', 9, 'waiting', 'Khám đau đầu'),
-    (10, '2025-04-20', '10:15:00', 10, 'waiting', 'Khám viêm da');
+(1, '2025-07-07', '08:00:00', 1, 'completed', 'Khám cảm cúm'),
+(2, '2025-07-07', '08:15:00', 2, 'completed', 'Khám viêm họng'),
+(3, '2025-07-07', '08:30:00', 3, 'completed', 'Khám tiêu chảy'),
+(4, '2025-07-07', '08:45:00', 4, 'completed', 'Khám đau đầu'),
+(5, '2025-07-07', '09:00:00', 5, 'completed', 'Khám viêm da');
 
--- Chèn dữ liệu vào bảng medical_records (5 phiếu khám mẫu)
+-- Ngày 08/07/2025 - hoàn thành
+INSERT INTO appointment_lists (patient_id, appointment_date, appointment_time, order_number, status, notes) VALUES
+(6, '2025-07-08', '08:00:00', 1, 'completed', 'Khám cảm cúm'),
+(7, '2025-07-08', '08:15:00', 2, 'completed', 'Khám viêm họng'),
+(8, '2025-07-08', '08:30:00', 3, 'completed', 'Khám tiêu chảy'),
+(9, '2025-07-08', '08:45:00', 4, 'completed', 'Khám đau đầu'),
+(10, '2025-07-08', '09:00:00', 5, 'completed', 'Khám viêm da'),
+(11, '2025-07-08', '09:15:00', 6, 'completed', 'Khám dị ứng'),
+(12, '2025-07-08', '09:30:00', 7, 'completed', 'Khám viêm mũi');
+
+-- Ngày 09/07/2025 - đang chờ, tổng cộng 38 lịch hẹn
+INSERT INTO appointment_lists (patient_id, appointment_date, appointment_time, order_number, status, notes) VALUES
+(13, '2025-07-09', '08:00:00', 1, 'waiting', 'Khám cảm cúm'),
+(14, '2025-07-09', '08:15:00', 2, 'waiting', 'Khám viêm họng'),
+(15, '2025-07-09', '08:30:00', 3, 'waiting', 'Khám tiêu chảy'),
+(16, '2025-07-09', '08:45:00', 4, 'waiting', 'Khám đau đầu'),
+(17, '2025-07-09', '09:00:00', 5, 'waiting', 'Khám viêm da'),
+(18, '2025-07-09', '09:15:00', 6, 'waiting', 'Khám cảm lạnh'),
+(1, '2025-07-09', '09:30:00', 7, 'waiting', 'Khám dị ứng'),
+(2, '2025-07-09', '09:45:00', 8, 'waiting', 'Khám tiêu hóa'),
+(3, '2025-07-09', '10:00:00', 9, 'waiting', 'Khám đau lưng'),
+(4, '2025-07-09', '10:15:00', 10, 'waiting', 'Khám huyết áp'),
+(5, '2025-07-09', '10:30:00', 11, 'waiting', 'Khám cảm cúm'),
+(6, '2025-07-09', '10:45:00', 12, 'waiting', 'Khám viêm mũi dị ứng'),
+(7, '2025-07-09', '11:00:00', 13, 'waiting', 'Khám tai mũi họng'),
+(8, '2025-07-09', '11:15:00', 14, 'waiting', 'Khám ho kéo dài'),
+(9, '2025-07-09', '11:30:00', 15, 'waiting', 'Khám tiêu chảy'),
+(10, '2025-07-09', '11:45:00', 16, 'waiting', 'Khám viêm họng hạt'),
+(11, '2025-07-09', '12:00:00', 17, 'waiting', 'Khám đau đầu mãn tính'),
+(12, '2025-07-09', '12:15:00', 18, 'waiting', 'Khám da liễu');
+
+
+-- Ngày 07/07/2025
 INSERT INTO medical_records (patient_id, staff_id, examination_date, symptoms, diagnosis, disease_type_id, status, notes) VALUES
-    (1, 2, '2025-04-20', 'Sốt, ho, sổ mũi', 'Cảm cúm thông thường', 1, 'completed', 'Cần nghỉ ngơi, uống nhiều nước'),
-    (2, 2, '2025-04-20', 'Đau rát họng, khó nuốt', 'Viêm họng cấp', 2, 'completed', 'Tránh đồ lạnh'),
-    (3, 2, '2025-04-20', 'Đi ngoài nhiều lần, đau bụng', 'Tiêu chảy cấp', 3, 'completed', 'Bù nước, điện giải'),
-    (4, 2, '2025-04-20', 'Đau nhức đầu, chóng mặt', 'Đau đầu do căng thẳng', 4, 'completed', 'Nghỉ ngơi, giảm căng thẳng'),
-    (5, 2, '2025-04-20', 'Ngứa, đỏ da vùng tay', 'Viêm da dị ứng', 5, 'completed', 'Tránh tiếp xúc chất kích ứng');
+(1, 2, '2025-07-07', 'Sốt nhẹ, ho', 'Cảm cúm', 1, 'completed', 'Nghỉ ngơi, uống thuốc'),
+(2, 2, '2025-07-07', 'Đau họng', 'Viêm họng', 2, 'completed', 'Tránh uống lạnh'),
+(3, 2, '2025-07-07', 'Đau bụng, đi ngoài', 'Tiêu chảy', 3, 'completed', 'Bù nước, men tiêu hóa'),
+(4, 2, '2025-07-07', 'Đau đầu căng thẳng', 'Đau đầu', 4, 'completed', 'Nghỉ ngơi, giảm stress'),
+(5, 2, '2025-07-07', 'Da đỏ, ngứa', 'Viêm da', 5, 'completed', 'Tránh tiếp xúc dị ứng');
 
--- Chèn dữ liệu vào bảng prescriptions (10 đơn thuốc mẫu)
+-- Ngày 08/07/2025
+INSERT INTO medical_records (patient_id, staff_id, examination_date, symptoms, diagnosis, disease_type_id, status, notes) VALUES
+(6, 2, '2025-07-08', 'Ho có đờm', 'Cảm cúm', 1, 'completed', 'Thuốc ho, vitamin'),
+(7, 2, '2025-07-08', 'Đau rát họng', 'Viêm họng', 2, 'completed', 'Nước ấm, thuốc ngậm'),
+(8, 2, '2025-07-08', 'Đi ngoài nhiều lần', 'Tiêu chảy', 3, 'completed', 'Tránh đồ sống'),
+(9, 2, '2025-07-08', 'Đau đầu nhẹ', 'Đau đầu', 4, 'completed', 'Giảm đau'),
+(10, 2, '2025-07-08', 'Mẩn ngứa tay chân', 'Viêm da', 5, 'completed', 'Bôi thuốc dị ứng'),
+(11, 2, '2025-07-08', 'Ho, đau họng', 'Viêm họng', 2, 'completed', 'Thuốc uống'),
+(12, 2, '2025-07-08', 'Khó tiêu, đầy bụng', 'Tiêu chảy nhẹ', 3, 'completed', 'Men tiêu hóa');
+
+
+-- Giả định staff_id = 2, usage_instruction_id = 1 (uống), 3 (bôi)
 INSERT INTO prescriptions (medical_record_id, medicine_id, staff_id, quantity, usage_instruction_id, notes) VALUES
-    (1, 1, 2, 10, 1, 'Uống khi sốt cao'), -- Paracetamol cho cảm cúm
-    (1, 5, 2, 5, 1, 'Trị dị ứng'), -- Loratadine
-    (2, 2, 2, 14, 1, 'Kháng sinh'), -- Amoxicillin cho viêm họng
-    (2, 4, 2, 6, 1, 'Giảm đau'), -- Ibuprofen
-    (3, 9, 2, 10, 1, 'Trị tiêu chảy'), -- Berberine
-    (3, 18, 2, 1, 1, 'Bù nước'), -- Natri clorid
-    (4, 1, 2, 8, 1, 'Giảm đau đầu'), -- Paracetamol
-    (4, 8, 2, 5, 1, 'Hỗ trợ giảm đau'), -- Aspirin
-    (5, 10, 2, 4, 3, 'Bôi vùng da viêm'), -- Dexamethasone
-    (5, 19, 2, 1, 3, 'Sát khuẩn da'); -- Betadine
+-- Ngày 07/07
+(6, 1, 2, 10, 1, 'Uống khi sốt'),
+(6, 5, 2, 5, 1, 'Trị dị ứng'),
+(7, 2, 2, 14, 1, 'Kháng sinh'),
+(7, 4, 2, 6, 1, 'Giảm đau'),
+(8, 9, 2, 10, 1, 'Trị tiêu chảy'),
+(8, 18, 2, 1, 1, 'Bù nước'),
+(9, 1, 2, 8, 1, 'Giảm đau đầu'),
+(9, 8, 2, 5, 1, 'Hỗ trợ giảm đau'),
+(10, 10, 2, 4, 3, 'Bôi vùng da viêm'),
+(10, 19, 2, 1, 3, 'Sát khuẩn da'),
 
--- Chèn dữ liệu vào bảng invoices (5 hóa đơn mẫu)
+-- Ngày 08/07
+(11, 1, 2, 10, 1, 'Hạ sốt'),
+(11, 5, 2, 5, 1, 'Kháng dị ứng');
+
+-- Giả sử staff_id thu ngân là 3
 INSERT INTO invoices (medical_record_id, staff_id, examination_fee, medicine_fee, total_fee, payment_date, status, notes) VALUES
-    (1, 3, 30000, 5500, 35500, '2025-04-20 10:00:00', 'paid', 'Thanh toán tiền mặt'),
-    (2, 3, 30000, 13400, 43400, '2025-04-20 11:00:00', 'paid', 'Thanh toán chuyển khoản'),
-    (3, 3, 30000, 9000, 39000, '2025-04-20 12:00:00', 'paid', 'Thanh toán tiền mặt'),
-    (4, 3, 30000, 5700, 35700, '2025-04-20 13:00:00', 'paid', 'Thanh toán tiền mặt'),
-    (5, 3, 30000, 28000, 58000, '2025-04-20 14:00:00', 'paid', 'Thanh toán chuyển khoản');
+-- Ngày 07/07
+(6, 3, 30000, 5500, 35500, '2025-07-07 08:00:00', 'paid', 'Tiền mặt'),
+(7, 3, 30000, 13400, 43400, '2025-07-07 08:30:00', 'paid', 'Chuyển khoản'),
+(8, 3, 30000, 9000, 39000, '2025-07-07 09:00:00', 'paid', 'Tiền mặt'),
+(9, 3, 30000, 5700, 35700, '2025-07-07 09:30:00', 'paid', 'Tiền mặt'),
+(10, 3, 30000, 28000, 58000, '2025-07-07 10:00:00', 'paid', 'Chuyển khoản'),
+
+-- Ngày 08/07
+(11, 3, 30000, 6000, 36000, '2025-07-08 08:00:00', 'paid', 'Tiền mặt');
+
 
 
 
